@@ -37,9 +37,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <stdio.h>
 #include <verilated.h>
+#include <time.h>
 #include "config.h"
 #include "testCommon.h"
 #include "VmulAddRecF16.h"
+
 
 /*----------------------------------------------------------------------------
 *----------------------------------------------------------------------------*/
@@ -73,6 +75,7 @@ int main( int argc, char *argv[] )
     VmulAddRecF16 *modulePtr = new VmulAddRecF16;
     modulePtr->control = control;
     modulePtr->op = 0;
+    modulePtr->int_mul = 0;
     modulePtr->roundingMode = roundingMode;
     long long errorCount = 0;
     long long count = 0;
@@ -136,6 +139,33 @@ int main( int argc, char *argv[] )
             }
         }
     }
+
+    /*------------------------------------------------------------------------
+    *------------------------------------------------------------------------*/
+    // Integer multiplication test.
+    fprintf( stderr, "Starting integer multiplication test...\n");
+    srand(time(nullptr));
+
+    modulePtr->int_mul = 1;
+    modulePtr->eval();
+    for(int i = 0; i < 10000; ++i){
+        uint16_t a = rand();
+        uint16_t b = rand();
+        uint16_t c = a * b;
+        modulePtr->a = a;
+        modulePtr->b = b;
+        modulePtr->eval();
+        if(modulePtr->int_mul_res != c){
+            fprintf( stderr, "opA = %d, opB = %d, opC = %d act=%d \n", a, b, c, modulePtr->int_mul_res );
+            ++errorCount;
+            if ( errorCount == maxNumErrors ) {
+                count += partialCount;
+                goto errorStop;
+            }
+        }
+    }
+
+
     count += partialCount;
     fputs( "\r                        \r", stderr );
     if ( errorCount ) goto errorStop;
@@ -146,6 +176,7 @@ int main( int argc, char *argv[] )
         control,
         roundingMode
     );
+
     return 0;
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/

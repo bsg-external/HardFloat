@@ -37,6 +37,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <stdio.h>
 #include <verilated.h>
+#include <time.h>
 #include "config.h"
 #include "testCommon.h"
 #include "VmulAddRecF32.h"
@@ -73,6 +74,7 @@ int main( int argc, char *argv[] )
     VmulAddRecF32 *modulePtr = new VmulAddRecF32;
     modulePtr->control = control;
     modulePtr->op = 0;
+    modulePtr->int_mul = 0;
     modulePtr->roundingMode = roundingMode;
     long long errorCount = 0;
     long long count = 0;
@@ -141,6 +143,31 @@ int main( int argc, char *argv[] )
             }
         }
     }
+    /*------------------------------------------------------------------------
+    *------------------------------------------------------------------------*/
+    // Integer multiplication test.
+    fprintf( stderr, "Starting integer multiplication test...\n");
+    srand(time(nullptr));
+
+    modulePtr->int_mul = 1;
+    modulePtr->eval();
+    for(int i = 0; i < 10000; ++i){
+        uint32_t a = rand();
+        uint32_t b = rand();
+        uint32_t c = a * b;
+        modulePtr->a = a;
+        modulePtr->b = b;
+        modulePtr->eval();
+        if(modulePtr->int_mul_res != c){
+            fprintf( stderr, "Error...\n");
+            ++errorCount;
+            if ( errorCount == maxNumErrors ) {
+                count += partialCount;
+                goto errorStop;
+            }
+        }
+    }
+
     count += partialCount;
     fputs( "\r                        \r", stderr );
     if ( errorCount ) goto errorStop;

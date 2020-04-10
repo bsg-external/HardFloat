@@ -38,6 +38,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <stdio.h>
 #include <verilated.h>
+#include <time.h>
 #include "config.h"
 #include "testCommon.h"
 #include "VmulAddRecF128.h"
