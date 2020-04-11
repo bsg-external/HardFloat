@@ -72,8 +72,7 @@ module test_mulAddRecFN#(parameter expWidth = 3, parameter sigWidth = 3);
     mulAddRecFN#(expWidth, sigWidth)
         mulAddRecFN(
             control,
-            2'b00,
-            int_mul,
+            {int_mul, 2'b00},
             recA,
             recB,
             recC,

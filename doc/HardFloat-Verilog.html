@@ -1498,10 +1498,9 @@ IEEE Floating-Point Standard:
 <BLOCKQUOTE>
 <PRE>
 module
-    mulAddRecFN#(parameter expWidth, parameter sigWidth) (
+    mulAddRecFN#(parameter expWidth, parameter sigWidth, parameter integer_multiply_p = 1) (
         input [(`floatControlWidth - 1):0] control,
-        input [1:0] op,
-        input int_mul,
+        input [2:0] op,
         input [(expWidth + sigWidth):0] a,
         input [(expWidth + sigWidth):0] b,
         input [(expWidth + sigWidth):0] c,
@@ -1522,7 +1521,7 @@ exception is indicated even if operand <CODE><I>c</I></CODE> is a quiet NaN.
 </P>
 
 <P>
-The bits of input <CODE>op</CODE> affect the signs of the addends, making it
+The bits of input <CODE>op[1:0]</CODE> affect the signs of the addends, making it
 possible to turn addition into subtraction (much like the <CODE>subOp</CODE>
 input to <CODE>addRecFN</CODE>).
 The exact effects of <CODE>op</CODE> are summarized in this table:
@@ -1561,11 +1560,11 @@ The exact effects of <CODE>op</CODE> are summarized in this table:
 In all cases, the function is computed with only a single rounding, of course.
 </P>
 
-Also, Fused Multiply-Add can perform integer multiplication <i>a</i> * <i>b</i> when <i>int_mul</i> is set to 1. We use occasions <code>sigWidth = 24</code> and <code>expWidth = 8</code> as an example to illustate the process. Clearly, there is a 24bit multiplier and 48bit adder in the module such configured. The figure below shows the regular way we perform 32bit multiplication: (Thanks for Professor Michael B. Taylor to provide this figure.)
+Also, Fused Multiply-Add can perform integer multiplication <i>a</i> * <i>b</i> when parameter <i>integer_multiply_p</i> is set to 1. If so, <code>op[2]</code> is the valid signal for enabling this mode. We use occasions <code>sigWidth = 24</code> and <code>expWidth = 8</code> as an example to illustate the process. Clearly, there is a 24bit multiplier and 48bit adder in the module such configured. The figure below shows the regular way we perform 32bit multiplication: (Thanks for Professor Michael B. Taylor to provide this figure.)
 <br>
-<img src="int_mul.png">
+<img src="fma.svg">
 <br>
-The red triangle part is done with 24bit multiplier. To generate blue part, we need two 8bit multiplies and their sum. At last, we use 48bit adder to combile them together. This method can be easily extended to any <code>expWidth</code> and <code>sigWidth</code> as long as they met the requirement of HardFloat.
+The red part is done with 24bit multiplier. To generate blue part, we need two 8bit multiplies and their sum. At last, we use 48bit adder to combile them together. This method can be easily extended to any <code>expWidth</code> and <code>sigWidth</code> as long as they met the requirement of HardFloat. Figure on the right shows how we use the same approach on FP64 to finish a 64bit MUL.
 
 <P>
 A variant module, <CODE>mulAddRecFNToRaw</CODE>, returns the intermediate
@@ -1577,8 +1576,7 @@ significand:
 module
     mulAddRecFNToRaw#(parameter expWidth, parameter sigWidth) (
         input [(`floatControlWidth - 1):0] control,
-        input [1:0] op,
-        input int_mul,
+        input [2:0] op,
         input [(expWidth + sigWidth):0] a,
         input [(expWidth + sigWidth):0] b,
         input [(expWidth + sigWidth):0] c,

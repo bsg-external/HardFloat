@@ -52,7 +52,7 @@ module
     wire [16:0] recF16_1 = 'h08000;
     mulAddRecFN#(5, 11)
         mulAddRecFN(
-            control, 2'b0, int_mul, a, recF16_1, b, roundingMode, out, exceptionFlags, int_mul_res);
+            control, {int_mul, 2'b0}, a, recF16_1, b, roundingMode, out, exceptionFlags, int_mul_res);
 
 endmodule
 
@@ -71,7 +71,7 @@ module
     wire [32:0] recF32_1 = 33'h080000000;
     mulAddRecFN#(8, 24)
         mulAddRecFN(
-            control, 2'b0, int_mul, a, recF32_1, b, roundingMode, out, exceptionFlags, int_mul_res);
+            control, {int_mul, 2'b0}, a, recF32_1, b, roundingMode, out, exceptionFlags, int_mul_res);
 
 endmodule
 
@@ -90,7 +90,7 @@ module
     wire [64:0] recF64_1 = 65'h08000000000000000;
     mulAddRecFN#(11, 53)
         mulAddRecFN(
-            control, 2'b0, int_mul, a, recF64_1, b, roundingMode, out, exceptionFlags, int_mul_res);
+            control, {int_mul, 2'b0}, a, recF64_1, b, roundingMode, out, exceptionFlags, int_mul_res);
 
 endmodule
 
@@ -105,9 +105,9 @@ module
     );
     wire [127:0] int_mul_res;
     wire [128:0] recF128_1 = 129'h080000000000000000000000000000000;
-    mulAddRecFN#(15, 113)
+    mulAddRecFN#(15, 113, 0)
         mulAddRecFN(
-            control, 2'b0, 1'b0, a, recF128_1, b, roundingMode, out, exceptionFlags, int_mul_res
+            control, 3'b0, a, recF128_1, b, roundingMode, out, exceptionFlags, int_mul_res
         );
 
 endmodule
@@ -127,7 +127,7 @@ module
     wire [16:0] zeroAddend = {a[16] ^ b[16], 16'b0};
     mulAddRecFN#(5, 11)
         mulAddRecFN(
-            control, 2'b0, int_mul, a, b, zeroAddend, roundingMode, out, exceptionFlags, int_mul_res
+            control, {int_mul, 2'b0}, a, b, zeroAddend, roundingMode, out, exceptionFlags, int_mul_res
         );
 
 endmodule
@@ -147,7 +147,7 @@ module
     wire [32:0] zeroAddend = {a[32] ^ b[32], 32'b0};
     mulAddRecFN#(8, 24)
         mulAddRecFN(
-            control, 2'b0, int_mul, a, b, zeroAddend, roundingMode, out, exceptionFlags, int_mul_res
+            control, {int_mul, 2'b0}, a, b, zeroAddend, roundingMode, out, exceptionFlags, int_mul_res
         );
 
 endmodule
@@ -167,7 +167,7 @@ module
     wire [64:0] zeroAddend = {a[64] ^ b[64], 64'b0};
     mulAddRecFN#(11, 53)
         mulAddRecFN(
-            control, 2'b0, int_mul, a, b, zeroAddend, roundingMode, out, exceptionFlags, int_mul_res
+            control, {int_mul, 2'b0}, a, b, zeroAddend, roundingMode, out, exceptionFlags, int_mul_res
         );
 
 endmodule
@@ -184,9 +184,9 @@ module
 
     wire [128:0] zeroAddend = {a[128] ^ b[128], 128'b0};
     wire [127:0] int_mul_res;
-    mulAddRecFN#(15, 113)
+    mulAddRecFN#(15, 113, 0)
         mulAddRecFN(
-            control, 2'b0, 1'b0, a, b, zeroAddend, roundingMode, out, exceptionFlags,int_mul_res
+            control, 3'b0, a, b, zeroAddend, roundingMode, out, exceptionFlags,int_mul_res
         );
 
 endmodule
@@ -195,7 +195,7 @@ module
     mulAddRecF16 (
         input [(`floatControlWidth - 1):0] control,
         input int_mul,
-        input [1:0] op,
+        input [2:0] op,
         input [16:0] a,
         input [16:0] b,
         input [16:0] c,
@@ -206,7 +206,7 @@ module
     );
 
     mulAddRecFN#(5, 11)
-        mulAddRecFN(control, op, int_mul, a, b, c, roundingMode, out, exceptionFlags, int_mul_res);
+        mulAddRecFN(control, op, a, b, c, roundingMode, out, exceptionFlags, int_mul_res);
 
 endmodule
 
@@ -214,7 +214,7 @@ module
     mulAddRecF32 (
         input [(`floatControlWidth - 1):0] control,
         input int_mul,
-        input [1:0] op,
+        input [2:0] op,
         input [32:0] a,
         input [32:0] b,
         input [32:0] c,
@@ -225,7 +225,7 @@ module
     );
 
     mulAddRecFN#(8, 24)
-        mulAddRecFN(control, op, int_mul, a, b, c, roundingMode, out, exceptionFlags, int_mul_res);
+        mulAddRecFN(control, op, a, b, c, roundingMode, out, exceptionFlags, int_mul_res);
 
 endmodule
 
@@ -233,7 +233,7 @@ module
     mulAddRecF64 (
         input [(`floatControlWidth - 1):0] control,
         input int_mul,
-        input [1:0] op,
+        input [2:0] op,
         input [64:0] a,
         input [64:0] b,
         input [64:0] c,
@@ -244,14 +244,14 @@ module
     );
 
     mulAddRecFN#(11, 53)
-        mulAddRecFN(control, op, int_mul, a, b, c, roundingMode, out, exceptionFlags, int_mul_res);
+        mulAddRecFN(control, op, a, b, c, roundingMode, out, exceptionFlags, int_mul_res);
 
 endmodule
 
 module
     mulAddRecF128 (
         input [(`floatControlWidth - 1):0] control,
-        input [1:0] op,
+        input [2:0] op,
         input [128:0] a,
         input [128:0] b,
         input [128:0] c,
@@ -263,7 +263,7 @@ module
     wire [127:0] int_mul_res;
 
     mulAddRecFN#(15, 113)
-        mulAddRecFN(control, op, 1'b0, a, b, c, roundingMode, out, exceptionFlags, int_mul_res);
+        mulAddRecFN(control, op, a, b, c, roundingMode, out, exceptionFlags, int_mul_res);
 
 endmodule
 

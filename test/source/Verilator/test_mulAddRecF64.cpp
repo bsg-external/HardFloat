@@ -75,7 +75,6 @@ int main( int argc, char *argv[] )
     VmulAddRecF64 *modulePtr = new VmulAddRecF64;
     modulePtr->control = control;
     modulePtr->op = 0;
-    modulePtr->int_mul = 0;
     modulePtr->roundingMode = roundingMode;
     long long errorCount = 0;
     long long count = 0;
@@ -165,7 +164,7 @@ int main( int argc, char *argv[] )
     fprintf( stderr, "Starting integer multiplication test...\n");
     srand(time(nullptr));
 
-    modulePtr->int_mul = 1;
+    modulePtr->op = 4;
     modulePtr->eval();
     for(int i = 0; i < 10000; ++i){
         uint64_t a = rand();
