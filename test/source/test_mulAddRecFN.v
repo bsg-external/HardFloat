@@ -68,7 +68,7 @@ module test_mulAddRecFN#(parameter expWidth = 3, parameter sigWidth = 3);
     wire [4:0] exceptionFlags;
     reg int_mul;
     integer i;
-    wire [expWidth + sigWidth-1:0] int_mul_res;
+    wire [expWidth + sigWidth-1:0] out_imul;
     mulAddRecFN#(expWidth, sigWidth)
         mulAddRecFN(
             control,
@@ -79,7 +79,7 @@ module test_mulAddRecFN#(parameter expWidth = 3, parameter sigWidth = 3);
             roundingMode,
             recOut,
             exceptionFlags,
-            int_mul_res
+            out_imul
         );
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
@@ -96,7 +96,7 @@ module test_mulAddRecFN#(parameter expWidth = 3, parameter sigWidth = 3);
             for(i = 0; i < 1000; i = i + 1) begin
                 a = $random;
                 b = $random;
-                if(int_mul_res != a * b)begin
+                if(out_imul != a * b)begin
                     errorCount = errorCount + 1;
                     if (errorCount == maxNumErrors) disable int_loop;
                 end

@@ -42,7 +42,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 module
     mulAddRecFNToRaw_preMul#(
-        parameter expWidth = 3, parameter sigWidth = 3, parameter integer_multiply_p = 1
+        parameter expWidth = 3, parameter sigWidth = 3, parameter imulEn = 1
     ) (
         control,
         op,
@@ -163,7 +163,7 @@ module
     propagateFloatNaN_mulAdd#(sigWidth)
         propagateNaN(
             control,
-            op,
+            op[1:0],
             isNaNA,
             signA,
             sigA[(sigWidth - 2):0],
@@ -185,7 +185,7 @@ module
 `endif
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    if(integer_multiply_p) begin
+    if(imulEn) begin: fi1
         // This part has been modified so that we can support RISC-V integer multiply instruction MUL.
         // Please refer to the document for detailed implementation.
         assign mulAddA = op[2] ? a[sigWidth-1:0] : sigA;
@@ -194,7 +194,7 @@ module
         wire [expWidth-1:0] aux_part = a[expWidth-1:0] * b[sigWidth+:expWidth] + a[sigWidth+:expWidth] * b[expWidth-1:0];
         assign mulAddC = op[2] ? {aux_part, {sigWidth{1'b0}}} : alignedSigC[prodWidth:1];
     end
-    else begin
+    else begin: fi2
         assign mulAddA = sigA;
         assign mulAddB = sigB;
         assign mulAddC = alignedSigC[prodWidth:1];
@@ -379,7 +379,7 @@ module
     mulAddRecFNToRaw#(
         parameter expWidth = 3,
         parameter sigWidth = 3,
-        parameter integer_multiply_p = 1'b1 // set 1 to enable RV MUL.
+        parameter imulEn = 1'b1 // set 1 to enable integer MUL.
     ) (
         input [(`floatControlWidth - 1):0] control,
         // by set op[2] to 1, we can reuse this module to execute RISC-V integer multiply instruction MUL.
@@ -397,7 +397,7 @@ module
         output signed [(expWidth + 1):0] out_sExp,
         output [(sigWidth + 2):0] out_sig,
         // The output port of integer multiply.
-        output [expWidth + sigWidth-1:0] int_mul_res
+        output [expWidth + sigWidth-1:0] out_imul
     );
 `include "HardFloat_localFuncs.vi"
 
@@ -407,7 +407,7 @@ module
     wire signed [(expWidth + 1):0] intermed_sExp;
     wire [(clog2(sigWidth + 1) - 1):0] intermed_CDom_CAlignDist;
     wire [(sigWidth + 1):0] intermed_highAlignedSigC;
-    mulAddRecFNToRaw_preMul#(expWidth, sigWidth, integer_multiply_p)
+    mulAddRecFNToRaw_preMul#(expWidth, sigWidth, imulEn)
         mulAddToRaw_preMul(
             control,
             op,
@@ -443,7 +443,7 @@ module
             out_sExp,
             out_sig
         );
-    assign int_mul_res = mulAddResult[expWidth + sigWidth-1:0];
+    assign out_imul = mulAddResult[expWidth + sigWidth-1:0];
 endmodule
 
 /*----------------------------------------------------------------------------
@@ -453,7 +453,7 @@ module
     mulAddRecFN#(
         parameter expWidth = 3,
         parameter sigWidth = 3,
-        parameter integer_multiply_p = 1'b1
+        parameter imulEn = 1'b1
     ) (
         input [(`floatControlWidth - 1):0] control,
         input [2:0] op, 
@@ -463,13 +463,13 @@ module
         input [2:0] roundingMode,
         output [(expWidth + sigWidth):0] out,
         output [4:0] exceptionFlags,
-        output [expWidth + sigWidth-1:0] int_mul_res
+        output [expWidth + sigWidth-1:0] out_imul
     );
 
     wire invalidExc, out_isNaN, out_isInf, out_isZero, out_sign;
     wire signed [(expWidth + 1):0] out_sExp;
     wire [(sigWidth + 2):0] out_sig;
-    mulAddRecFNToRaw#(expWidth, sigWidth, integer_multiply_p)
+    mulAddRecFNToRaw#(expWidth, sigWidth, imulEn)
         mulAddRecFNToRaw(
             control,
             op,
@@ -484,7 +484,7 @@ module
             out_sign,
             out_sExp,
             out_sig,
-            int_mul_res
+            out_imul
         );
     roundRawFNToRecFN#(expWidth, sigWidth, 0)
         roundRawOut(

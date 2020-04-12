@@ -154,8 +154,8 @@ int main( int argc, char *argv[] )
         modulePtr->a = a;
         modulePtr->b = b;
         modulePtr->eval();
-        if(modulePtr->int_mul_res != c){
-            fprintf( stderr, "opA = %d, opB = %d, opC = %d act=%d \n", a, b, c, modulePtr->int_mul_res );
+        if(modulePtr->out_imul != c){
+            fprintf( stderr, "opA = %d, opB = %d, opC = %d act=%d \n", a, b, c, modulePtr->out_imul );
             ++errorCount;
             if ( errorCount == maxNumErrors ) {
                 count += partialCount;

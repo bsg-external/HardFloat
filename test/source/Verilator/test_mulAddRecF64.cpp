@@ -180,7 +180,7 @@ int main( int argc, char *argv[] )
         modulePtr->b[1] = b_idx[1];
         modulePtr->b[2] = 0;
         modulePtr->eval();
-        if(modulePtr->int_mul_res != c){
+        if(modulePtr->out_imul != c){
             ++errorCount;
             if ( errorCount == maxNumErrors ) {
                 fprintf( stderr, "Error...\n");

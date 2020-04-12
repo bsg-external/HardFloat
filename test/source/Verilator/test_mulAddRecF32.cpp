@@ -157,7 +157,7 @@ int main( int argc, char *argv[] )
         modulePtr->a = a;
         modulePtr->b = b;
         modulePtr->eval();
-        if(modulePtr->int_mul_res != c){
+        if(modulePtr->out_imul != c){
             fprintf( stderr, "Error...\n");
             ++errorCount;
             if ( errorCount == maxNumErrors ) {
