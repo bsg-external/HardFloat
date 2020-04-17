@@ -192,7 +192,7 @@ module
         assign mulAddB = op[2] ? b[sigWidth-1:0] : sigB;
         // Generate modification bits
         wire [expWidth-1:0] aux_part = a[expWidth-1:0] * b[sigWidth+:expWidth] + a[sigWidth+:expWidth] * b[expWidth-1:0];
-        assign mulAddC = op[2] ? {aux_part, {sigWidth{1'b0}}} : alignedSigC[prodWidth:1];
+        assign mulAddC = op[2] ? {{(sigWidth - expWidth){1'b0}}, aux_part, {sigWidth{1'b0}}} : alignedSigC[prodWidth:1];
     end
     else begin: fi2
         assign mulAddA = sigA;
