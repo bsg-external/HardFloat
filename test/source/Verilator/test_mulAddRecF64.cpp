@@ -38,6 +38,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <stdio.h>
 #include <verilated.h>
+#include <time.h>
 #include "config.h"
 #include "testCommon.h"
 #include "VmulAddRecF64.h"
@@ -157,6 +158,38 @@ int main( int argc, char *argv[] )
             }
         }
     }
+    /*------------------------------------------------------------------------
+    *------------------------------------------------------------------------*/
+    // Integer multiplication test.
+    fprintf( stderr, "Starting integer multiplication test...\n");
+    srand(time(nullptr));
+
+    modulePtr->op = 4;
+    modulePtr->eval();
+    for(int i = 0; i < 10000; ++i){
+        uint64_t a = rand();
+        uint32_t *a_idx = (uint32_t *)&a;
+        uint64_t b = rand();
+        uint32_t *b_idx = (uint32_t *)&b;
+        uint64_t c = a * b;
+        
+        modulePtr->a[0] = a_idx[0];
+        modulePtr->a[1] = a_idx[1];
+        modulePtr->a[2] = 0;
+        modulePtr->b[0] = b_idx[0];
+        modulePtr->b[1] = b_idx[1];
+        modulePtr->b[2] = 0;
+        modulePtr->eval();
+        if(modulePtr->out_imul != c){
+            ++errorCount;
+            if ( errorCount == maxNumErrors ) {
+                fprintf( stderr, "Error...\n");
+                count += partialCount;
+                goto errorStop;
+            }
+        }
+    }
+
     count += partialCount;
     fputs( "\r                        \r", stderr );
     if ( errorCount ) goto errorStop;

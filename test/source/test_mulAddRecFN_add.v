@@ -65,10 +65,10 @@ module test_mulAddRecFN_add#(parameter expWidth = 3, parameter sigWidth = 3);
     *------------------------------------------------------------------------*/
     wire [formatWidth:0] recOut;
     wire [4:0] exceptionFlags;
-    mulAddRecFN#(expWidth, sigWidth)
+    mulAddRecFN#(expWidth, sigWidth, 0)
         mulAddRecFN_add(
             control,
-            2'b0,
+            3'b0,
             recA,
             {2'b01, {(expWidth + sigWidth - 1){1'b0}}},
             recB,

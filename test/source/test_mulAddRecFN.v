@@ -66,16 +66,20 @@ module test_mulAddRecFN#(parameter expWidth = 3, parameter sigWidth = 3);
     *------------------------------------------------------------------------*/
     wire [formatWidth:0] recOut;
     wire [4:0] exceptionFlags;
+    reg int_mul;
+    integer i;
+    wire [expWidth + sigWidth-1:0] out_imul;
     mulAddRecFN#(expWidth, sigWidth)
         mulAddRecFN(
             control,
-            2'b00,
+            {int_mul, 2'b00},
             recA,
             recB,
             recC,
             roundingMode,
             recOut,
-            exceptionFlags
+            exceptionFlags,
+            out_imul
         );
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
@@ -85,6 +89,21 @@ module test_mulAddRecFN#(parameter expWidth = 3, parameter sigWidth = 3);
     *------------------------------------------------------------------------*/
     integer errorCount, count, partialCount;
     initial begin
+        errorCount = 0;
+        // We generate 1000 examples to test the function.
+        int_mul = 1'b1;
+        begin:int_loop
+            for(i = 0; i < 1000; i = i + 1) begin
+                a = $random;
+                b = $random;
+                if(out_imul != a * b)begin
+                    errorCount = errorCount + 1;
+                    if (errorCount == maxNumErrors) disable int_loop;
+                end
+            end
+        end
+        int_mul = 1'b0;
+        $fwrite('h80000002, "Testing Integer Multiply Done. Error: %d\n", errorCount);
         /*--------------------------------------------------------------------
         *--------------------------------------------------------------------*/
         $fwrite('h80000002, "Testing 'mulAddRecF%0d'", formatWidth);
@@ -100,7 +119,6 @@ module test_mulAddRecFN#(parameter expWidth = 3, parameter sigWidth = 3);
         );
         /*--------------------------------------------------------------------
         *--------------------------------------------------------------------*/
-        errorCount = 0;
         count = 0;
         partialCount = 0;
         begin :TestLoop
