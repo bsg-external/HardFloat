@@ -186,6 +186,18 @@ module
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
     always @(posedge clock) begin
+      if (!nReset) begin
+            sqrtOp_Z <= 1'b0;
+            majorExc_Z <= 1'b0;
+            isNaN_Z <= 1'b0;
+            isInf_Z <= 1'b0;
+            isZero_Z <= 1'b0;
+            sign_Z <= 1'b0;
+            sExp_Z <= '0;
+            roundingMode_Z <= '0;
+            fractB_Z <= '0;
+      end
+      else begin
         if (entering) begin
             sqrtOp_Z   <= sqrtOp;
             majorExc_Z <= majorExc_S;
@@ -207,6 +219,7 @@ module
         if (entering_normalCase && !sqrtOp) begin
             fractB_Z <= sigB_S[(sigWidth - 2):0];
         end
+      end
     end
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
@@ -226,6 +239,12 @@ module
     wire signed [(sigWidth + 3):0] trialRem = rem - trialTerm;
     wire newBit = (0 <= trialRem);
     always @(posedge clock) begin
+      if (!nReset) begin
+        rem_Z <='0;
+        sigX_Z <='0;
+        notZeroRem_Z <= 1'b0;
+      end
+      else begin
         if (entering_normalCase || (cycleNum > 2)) begin
             rem_Z <= newBit ? trialRem : rem;
         end
@@ -253,6 +272,7 @@ module
                 | (!inReady              ? sigX_Z | bitMask       : 0);
         end
 `endif
+      end
     end
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
