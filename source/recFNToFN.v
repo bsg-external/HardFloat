@@ -55,7 +55,9 @@ module
     wire [sigWidth:0] sig;
     recFNToRawFN#(expWidth, sigWidth)
         recFNToRawFN(in, isNaN, isInf, isZero, sign, sExp, sig);
-    wire isSubnormal = (sExp < minNormExp);
+    wire isSubnormal =
+        ((sExp>>(expWidth - 2) == 'b010) && (sExp[(expWidth - 3):0] <= 1))
+            || (sExp>>(expWidth - 1) == 'b00);
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
     wire [(normDistWidth - 1):0] denormShiftDist = minNormExp - 1 - sExp;
