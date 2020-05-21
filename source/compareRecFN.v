@@ -70,8 +70,20 @@ module
     wire ordered = !isNaNA && !isNaNB;
     wire bothInfs  = isInfA  && isInfB;
     wire bothZeros = isZeroA && isZeroB;
-    wire eqExps = (sExpA == sExpB);
-    wire common_ltMags = (sExpA < sExpB) || (eqExps && (sigA < sigB));
+    // FIX provided by John Hauser.
+    // If one of input is recoded infinity with some bits in exp as x,
+    // expExps and common_ltMags go x, which propagates to the outputs.
+    // wire eqExps = (sExpA == sExpB);
+    // wire common_ltMags = (sExpA < sExpB) || (eqExps && (sigA < sigB));
+    wire eqHiExps = (sExpA>>(expWidth - 2) == sExpB>>(expWidth - 2));
+    wire eqExps =
+        eqHiExps && (sExpA[(expWidth - 3):0] == sExpB[(expWidth - 3):0]);
+    wire common_ltMags =
+        (sExpA>>(expWidth - 2) < sExpB>>(expWidth - 2))
+            || (eqHiExps
+                    && (sExpA[(expWidth - 3):0] < sExpB[(expWidth - 3):0]))
+            || (eqExps && (sigA < sigB));
+
     wire common_eqMags = eqExps && (sigA == sigB);
     wire ordered_lt =
         !bothZeros
