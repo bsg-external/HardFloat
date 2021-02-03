@@ -379,7 +379,8 @@ module
     mulAddRecFNToRaw#(
         parameter expWidth = 3,
         parameter sigWidth = 3,
-        parameter imulEn = 1'b1 // set 1 to enable integer MUL.
+        parameter imulEn = 1'b1, // set 1 to enable integer MUL.
+        parameter mulWidth = -1 // set if you want a multiplier that is a different width than the adder.
     ) (
         input [(`floatControlWidth - 1):0] control,
         // by set op[2] to 1, we can reuse this module to execute RISC-V integer multiply instruction MUL.
@@ -426,7 +427,13 @@ module
     
     
     // MAC
-    wire [sigWidth*2:0] mulAddResult = mulAddA * mulAddB + mulAddC;
+    wire [sigWidth*2:0] mulAddResult;
+    if (mulWidth == -1) begin
+      assign mulAddResult = mulAddA * mulAddB + mulAddC;
+    end else begin
+      wire [mulWidth*2:0] prod = mulAddA[sigWidth-1:(sigWidth-mulWidth)] * mulAddB[sigWidth-1:(sigWidth-mulWidth)];
+      assign mulAddResult = {prod, {(sigWidth*2-mulWidth*2){1'b0}}} + mulAddC;
+    end
     mulAddRecFNToRaw_postMul#(expWidth, sigWidth)
         mulAddToRaw_postMul(
             intermed_compactState,
@@ -453,7 +460,8 @@ module
     mulAddRecFN#(
         parameter expWidth = 3,
         parameter sigWidth = 3,
-        parameter imulEn = 1'b1
+        parameter imulEn = 1'b1,
+        parameter mulWidth = -1 // set if you want a multiplier that is a different width than the adder.
     ) (
         input [(`floatControlWidth - 1):0] control,
         input [2:0] op, 
@@ -469,7 +477,7 @@ module
     wire invalidExc, out_isNaN, out_isInf, out_isZero, out_sign;
     wire signed [(expWidth + 1):0] out_sExp;
     wire [(sigWidth + 2):0] out_sig;
-    mulAddRecFNToRaw#(expWidth, sigWidth, imulEn)
+    mulAddRecFNToRaw#(expWidth, sigWidth, imulEn, mulWidth)
         mulAddRecFNToRaw(
             control,
             op,
