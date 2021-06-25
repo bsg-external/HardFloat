@@ -38,11 +38,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *----------------------------------------------------------------------------*/
 
 function integer clog2;
-    input integer a;
+    input integer fa;
 
     begin
-        a = a - 1;
-        for (clog2 = 0; a > 0; clog2 = clog2 + 1) a = a>>1;
+        fa = fa - 1;
+        for (clog2 = 0; fa > 0; clog2 = clog2 + 1) fa = fa>>1;
     end
 
 endfunction
