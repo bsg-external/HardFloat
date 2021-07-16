@@ -379,8 +379,9 @@ module
     mulAddRecFNToRaw#(
         parameter expWidth = 3,
         parameter sigWidth = 3,
+	parameter integer latencyDstr[0:1] = {2,0},
         parameter imulEn = 1'b1 // set 1 to enable integer MUL.
-    ) (
+    ) ( input clock,
         input [(`floatControlWidth - 1):0] control,
         // by set op[2] to 1, we can reuse this module to execute RISC-V integer multiply instruction MUL.
         input [2:0] op,
@@ -407,6 +408,40 @@ module
     wire signed [(expWidth + 1):0] intermed_sExp;
     wire [(clog2(sigWidth + 1) - 1):0] intermed_CDom_CAlignDist;
     wire [(sigWidth + 1):0] intermed_highAlignedSigC;
+
+    wire [sigWidth*2:0] mulAddResultN;
+    wire [(sigWidth - 1):0] mulAddAN, mulAddBN;
+    wire [(sigWidth*2 - 1):0] mulAddCN;
+
+    wire [5:0] intermed_compactStateN;
+    wire signed [(expWidth + 1):0] intermed_sExpN;
+    wire [(clog2(sigWidth + 1) - 1):0] intermed_CDom_CAlignDistN;
+    wire [(sigWidth + 1):0] intermed_highAlignedSigCN;
+    wire [2:0]roundingModeN;
+
+    bsg_dff_chain#(sigWidth*4, latencyDstr[0])
+    	preDSP (
+    		clock,
+    		{mulAddA, mulAddB, mulAddC},
+    		{mulAddAN, mulAddBN, mulAddCN}
+    	);
+
+    bsg_dff_chain#(sigWidth*2+1, latencyDstr[1])
+    	postDSP (
+    		clock,
+    		mulAddResult,
+    		mulAddResultN
+    	);
+
+    bsg_dff_chain#($bits({intermed_compactState, intermed_sExp, intermed_CDom_CAlignDist, intermed_highAlignedSigC, roundingMode}),
+    		latencyDstr[0]+latencyDstr[1])
+    	shunt (
+    		clock,
+    		{intermed_compactState, intermed_sExp, intermed_CDom_CAlignDist, intermed_highAlignedSigC, roundingMode},
+    		{intermed_compactStateN, intermed_sExpN, intermed_CDom_CAlignDistN, intermed_highAlignedSigCN, roundingModeN}
+    	);
+
+    wire [sigWidth*2:0] mulAddResult = mulAddAN * mulAddBN + mulAddCN;
     mulAddRecFNToRaw_preMul#(expWidth, sigWidth, imulEn)
         mulAddToRaw_preMul(
             control,
@@ -429,12 +464,12 @@ module
     wire [sigWidth*2:0] mulAddResult = mulAddA * mulAddB + mulAddC;
     mulAddRecFNToRaw_postMul#(expWidth, sigWidth)
         mulAddToRaw_postMul(
-            intermed_compactState,
-            intermed_sExp,
-            intermed_CDom_CAlignDist,
-            intermed_highAlignedSigC,
-            mulAddResult,
-            roundingMode,
+            intermed_compactStateN,
+            intermed_sExpN,
+            intermed_CDom_CAlignDistN,
+            intermed_highAlignedSigCN,
+            mulAddResultN,
+            roundingModeN,
             invalidExc,
             out_isNaN,
             out_isInf,
@@ -443,7 +478,7 @@ module
             out_sExp,
             out_sig
         );
-    assign out_imul = mulAddResult[expWidth + sigWidth-1:0];
+    assign out_imul = mulAddResultN[expWidth + sigWidth-1:0];
 endmodule
 
 /*----------------------------------------------------------------------------
@@ -453,8 +488,9 @@ module
     mulAddRecFN#(
         parameter expWidth = 3,
         parameter sigWidth = 3,
+    	parameter integer latencyDstr[0:1] = {2,0},
         parameter imulEn = 1'b1
-    ) (
+    ) ( input clock, reset, 
         input [(`floatControlWidth - 1):0] control,
         input [2:0] op, 
         input [(expWidth + sigWidth):0] a,
@@ -469,8 +505,16 @@ module
     wire invalidExc, out_isNaN, out_isInf, out_isZero, out_sign;
     wire signed [(expWidth + 1):0] out_sExp;
     wire [(sigWidth + 2):0] out_sig;
-    mulAddRecFNToRaw#(expWidth, sigWidth, imulEn)
+
+    reg invalidExcR, out_isNaNR, out_isInfR, out_isZeroR, out_signR;
+    reg signed [(expWidth + 1):0] out_sExpR;
+    reg [(sigWidth + 2):0] out_sigR;
+    reg [2:0] roundingModeR;
+    reg [(`floatControlWidth - 1):0] controlR;
+
+    mulAddRecFNToRaw#(expWidth, sigWidth, latencyDstr, imulEn)
         mulAddRecFNToRaw(
+    		clock,
             control,
             op,
             a,
@@ -488,18 +532,41 @@ module
         );
     roundRawFNToRecFN#(expWidth, sigWidth, 0)
         roundRawOut(
-            control,
-            invalidExc,
+            controlR,
+            invalidExcR,
             1'b0,
-            out_isNaN,
-            out_isInf,
-            out_isZero,
-            out_sign,
-            out_sExp,
-            out_sig,
-            roundingMode,
+            out_isNaNR,
+            out_isInfR,
+            out_isZeroR,
+            out_signR,
+            out_sExpR,
+            out_sigR,
+            roundingModeR,
             out,
             exceptionFlags
         );
+    always @(posedge clock) begin
+      if (!reset) begin
+        controlR <= '0;
+        roundingModeR <= '0;
+        invalidExcR <= 1'b0;
+        out_isNaNR <= 1'b0;
+        out_isInfR <= 1'b0;
+        out_isZeroR <= 1'b0;
+        out_signR <= 1'b0;
+        out_sExpR <= '0;
+        out_sigR <= '0;
+      end else begin
+        controlR <= control;
+        roundingModeR <= roundingMode;
+        invalidExcR <= invalidExc;
+        out_isNaNR <= out_isNaN;
+        out_isInfR <= out_isInf;
+        out_isZeroR <= out_isZero;
+        out_signR <= out_sign;
+        out_sExpR <= out_sExp;
+        out_sigR <= out_sig;
+      end
+    end
 endmodule
 
