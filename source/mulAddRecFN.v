@@ -422,24 +422,24 @@ module
 
     bsg_dff_chain#(sigWidth*4, latencyDstr[0])
         preDSP (
-            clock,
-            {mulAddA, mulAddB, mulAddC},
-            {mulAddA_Z, mulAddB_Z, mulAddC_Z}
+            .clk_i(clock),
+            .data_i({mulAddA, mulAddB, mulAddC}),
+            .data_o({mulAddA_Z, mulAddB_Z, mulAddC_Z})
         );
 
     bsg_dff_chain#(sigWidth*2+1, latencyDstr[1])
         postDSP (
-            clock,
-            mulAddResult,
-            mulAddResult_Z
+            .clk_i(clock),
+            .data_i(mulAddResult),
+            .data_o(mulAddResult_Z)
         );
 
     bsg_dff_chain#($bits({intermed_compactState, intermed_sExp, intermed_CDom_CAlignDist, intermed_highAlignedSigC, roundingMode}),
             latencyDstr[0]+latencyDstr[1])
         shunt (
-            clock,
-            {intermed_compactState, intermed_sExp, intermed_CDom_CAlignDist, intermed_highAlignedSigC, roundingMode},
-            {intermed_compactState_Z, intermed_sExp_Z, intermed_CDom_CAlignDist_Z, intermed_highAlignedSigC_Z, roundingMode_Z}
+            .clk_i(clock),
+            .data_i({intermed_compactState, intermed_sExp, intermed_CDom_CAlignDist, intermed_highAlignedSigC, roundingMode}),
+            .data_o({intermed_compactState_Z, intermed_sExp_Z, intermed_CDom_CAlignDist_Z, intermed_highAlignedSigC_Z, roundingMode_Z})
         );
 
     mulAddRecFNToRaw_preMul#(expWidth, sigWidth, imulEn)
