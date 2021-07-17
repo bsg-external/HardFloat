@@ -421,14 +421,14 @@ module
     wire [sigWidth*2:0] mulAddResult = mulAddA_Z * mulAddB_Z + mulAddC_Z;
 
     bsg_dff_chain#(sigWidth*4, latencyDstr[0])
-    	preDSP (
-    		clock,
-    		{mulAddA, mulAddB, mulAddC},
-    		{mulAddA_Z, mulAddB_Z, mulAddC_Z}
-    	);
+        preDSP (
+            clock,
+            {mulAddA, mulAddB, mulAddC},
+            {mulAddA_Z, mulAddB_Z, mulAddC_Z}
+        );
 
     bsg_dff_chain#(sigWidth*2+1, latencyDstr[1])
-    	postDSP (
+        postDSP (
             clock,
             mulAddResult,
             mulAddResult_Z
@@ -436,11 +436,11 @@ module
 
     bsg_dff_chain#($bits({intermed_compactState, intermed_sExp, intermed_CDom_CAlignDist, intermed_highAlignedSigC, roundingMode}),
             latencyDstr[0]+latencyDstr[1])
-    	shunt (
-    	    clock,
-    	    {intermed_compactState, intermed_sExp, intermed_CDom_CAlignDist, intermed_highAlignedSigC, roundingMode},
-    	    {intermed_compactState_Z, intermed_sExp_Z, intermed_CDom_CAlignDist_Z, intermed_highAlignedSigC_Z, roundingMode_Z}
-    	);
+        shunt (
+            clock,
+            {intermed_compactState, intermed_sExp, intermed_CDom_CAlignDist, intermed_highAlignedSigC, roundingMode},
+            {intermed_compactState_Z, intermed_sExp_Z, intermed_CDom_CAlignDist_Z, intermed_highAlignedSigC_Z, roundingMode_Z}
+        );
 
     mulAddRecFNToRaw_preMul#(expWidth, sigWidth, imulEn)
         mulAddToRaw_preMul(
@@ -461,7 +461,6 @@ module
     
     
     // MAC
-    wire [sigWidth*2:0] mulAddResult = mulAddA * mulAddB + mulAddC;
     mulAddRecFNToRaw_postMul#(expWidth, sigWidth)
         mulAddToRaw_postMul(
             intermed_compactState_Z,
