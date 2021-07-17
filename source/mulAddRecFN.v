@@ -373,13 +373,26 @@ module
 endmodule
 
 /*----------------------------------------------------------------------------
-*----------------------------------------------------------------------------*/
+ * latencyDstr is used to distribute the latency manually
+ * for specific devices where automatic backwards retiming from the retiming_chain
+ * doesn't work. The array indices are filled according to the below diagram.
+ *  - Default '{0,0}
+ *  - Zynq    '{1,2}
+ *
+ *      preMul
+ *       /  \
+ *      0    0
+ *      |   DSP
+ *      1    1
+ *       \  /
+ *      postMul
+ *----------------------------------------------------------------------------*/
 
 module
     mulAddRecFNToRaw#(
         parameter expWidth = 3,
         parameter sigWidth = 3,
-        parameter integer latencyDstr[0:1] = {0,0},
+        parameter int latencyDstr[0:1] = '{0,0},
         parameter imulEn = 1'b1 // set 1 to enable integer MUL.
     ) ( input clock,
         input [(`floatControlWidth - 1):0] control,
@@ -487,7 +500,7 @@ module
     mulAddRecFN#(
         parameter expWidth = 3,
         parameter sigWidth = 3,
-        parameter integer latencyDstr[0:1] = {0,0},
+        parameter int latencyDstr[0:1] = '{0,0},
         parameter imulEn = 1'b1
     ) ( input clock,
         input [(`floatControlWidth - 1):0] control,
