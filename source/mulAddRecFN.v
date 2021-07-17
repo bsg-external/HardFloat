@@ -379,7 +379,7 @@ module
     mulAddRecFNToRaw#(
         parameter expWidth = 3,
         parameter sigWidth = 3,
-        parameter integer latencyDstr[0:1] = {2,0},
+        parameter integer latencyDstr[0:1] = {0,0},
         parameter imulEn = 1'b1 // set 1 to enable integer MUL.
     ) ( input clock,
         input [(`floatControlWidth - 1):0] control,
@@ -418,6 +418,7 @@ module
     wire [(clog2(sigWidth + 1) - 1):0] intermed_CDom_CAlignDist_Z;
     wire [(sigWidth + 1):0] intermed_highAlignedSigC_Z;
     wire [2:0]roundingMode_Z;
+    wire [sigWidth*2:0] mulAddResult = mulAddA_Z * mulAddB_Z + mulAddC_Z;
 
     bsg_dff_chain#(sigWidth*4, latencyDstr[0])
     	preDSP (
@@ -428,20 +429,19 @@ module
 
     bsg_dff_chain#(sigWidth*2+1, latencyDstr[1])
     	postDSP (
-    		clock,
-    		mulAddResult,
-    		mulAddResult_Z
-    	);
+            clock,
+            mulAddResult,
+            mulAddResult_Z
+        );
 
     bsg_dff_chain#($bits({intermed_compactState, intermed_sExp, intermed_CDom_CAlignDist, intermed_highAlignedSigC, roundingMode}),
-    		latencyDstr[0]+latencyDstr[1])
+            latencyDstr[0]+latencyDstr[1])
     	shunt (
-    		clock,
-    		{intermed_compactState, intermed_sExp, intermed_CDom_CAlignDist, intermed_highAlignedSigC, roundingMode},
-    		{intermed_compactState_Z, intermed_sExp_Z, intermed_CDom_CAlignDist_Z, intermed_highAlignedSigC_Z, roundingMode_Z}
+    	    clock,
+    	    {intermed_compactState, intermed_sExp, intermed_CDom_CAlignDist, intermed_highAlignedSigC, roundingMode},
+    	    {intermed_compactState_Z, intermed_sExp_Z, intermed_CDom_CAlignDist_Z, intermed_highAlignedSigC_Z, roundingMode_Z}
     	);
 
-    wire [sigWidth*2:0] mulAddResult = mulAddA_Z * mulAddB_Z + mulAddC_Z;
     mulAddRecFNToRaw_preMul#(expWidth, sigWidth, imulEn)
         mulAddToRaw_preMul(
             control,
@@ -488,9 +488,9 @@ module
     mulAddRecFN#(
         parameter expWidth = 3,
         parameter sigWidth = 3,
-    	parameter integer latencyDstr[0:1] = {2,0},
+        parameter integer latencyDstr[0:1] = {0,0},
         parameter imulEn = 1'b1
-    ) ( input clock, reset, 
+    ) ( input clock,
         input [(`floatControlWidth - 1):0] control,
         input [2:0] op, 
         input [(expWidth + sigWidth):0] a,
@@ -506,15 +506,9 @@ module
     wire signed [(expWidth + 1):0] out_sExp;
     wire [(sigWidth + 2):0] out_sig;
 
-    reg invalidExc_Z, out_isNaN_Z, out_isInf_Z, out_isZero_Z, out_sign_Z;
-    reg signed [(expWidth + 1):0] out_sExp_Z;
-    reg [(sigWidth + 2):0] out_sig_Z;
-    reg [2:0] roundingMode_Z;
-    reg [(`floatControlWidth - 1):0] control_Z;
-
     mulAddRecFNToRaw#(expWidth, sigWidth, latencyDstr, imulEn)
         mulAddRecFNToRaw(
-    		clock,
+            clock,
             control,
             op,
             a,
@@ -532,41 +526,18 @@ module
         );
     roundRawFNToRecFN#(expWidth, sigWidth, 0)
         roundRawOut(
-            control_Z,
-            invalidExc_Z,
+            control,
+            invalidExc,
             1'b0,
-            out_isNaN_Z,
-            out_isInf_Z,
-            out_isZero_Z,
-            out_sign_Z,
-            out_sExp_Z,
-            out_sig_Z,
-            roundingMode_Z,
+            out_isNaN,
+            out_isInf,
+            out_isZero,
+            out_sign,
+            out_sExp,
+            out_sig,
+            roundingMode,
             out,
             exceptionFlags
         );
-    always @(posedge clock) begin
-      if (!reset) begin
-        control_Z <= '0;
-        roundingMode_Z <= '0;
-        invalidExc_Z <= 1'b0;
-        out_isNaN_Z <= 1'b0;
-        out_isInf_Z <= 1'b0;
-        out_isZero_Z <= 1'b0;
-        out_sign_Z <= 1'b0;
-        out_sExp_Z <= '0;
-        out_sig_Z <= '0;
-      end else begin
-        control_Z <= control;
-        roundingMode_Z <= roundingMode;
-        invalidExc_Z <= invalidExc;
-        out_isNaN_Z <= out_isNaN;
-        out_isInf_Z <= out_isInf;
-        out_isZero_Z <= out_isZero;
-        out_sign_Z <= out_sign;
-        out_sExp_Z <= out_sExp;
-        out_sig_Z <= out_sig;
-      end
-    end
 endmodule
 
