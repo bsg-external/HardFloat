@@ -373,26 +373,25 @@ module
 endmodule
 
 /*----------------------------------------------------------------------------
- * latencyDstr is used to distribute the latency manually
- * for specific devices where automatic backwards retiming from the retiming_chain
- * doesn't work. The array indices are filled according to the below diagram.
- *  - Default '{0,0}
- *  - Zynq    '{1,2}
+ * 'pipeline' is used to insert pipelining registers in the following manner:
  *
  *      preMul
  *       /  \
- *      0    0
- *      |   DSP
- *      1    1
+ *      0    0        -> pipeline[0]
+ *      |  mulAdd     -> Integer MulAdd (uses DSP on Zynq 7020)
+ *      1    1        -> pipeline[1]
  *       \  /
  *      postMul
+ *
+ *  - No pipelining (default)   : '{0,0}
+ *  - 64 bit, Zynq 7020 @ 50 MHz: '{1,2}
  *----------------------------------------------------------------------------*/
 
 module
     mulAddRecFNToRaw#(
         parameter expWidth = 3,
         parameter sigWidth = 3,
-        parameter int latencyDstr[0:1] = '{0,0},
+        parameter int pipeline[0:1] = '{0,0},
         parameter imulEn = 1'b1 // set 1 to enable integer MUL.
     ) ( input clock,
         input [(`floatControlWidth - 1):0] control,
@@ -422,33 +421,34 @@ module
     wire [(clog2(sigWidth + 1) - 1):0] intermed_CDom_CAlignDist;
     wire [(sigWidth + 1):0] intermed_highAlignedSigC;
 
-    wire [sigWidth*2:0] mulAddResult_Z;
     wire [(sigWidth - 1):0] mulAddA_Z, mulAddB_Z;
     wire [(sigWidth*2 - 1):0] mulAddC_Z;
+    wire [sigWidth*2:0] mulAddResult = mulAddA_Z * mulAddB_Z + mulAddC_Z;
+    wire [sigWidth*2:0] mulAddResult_Z;
 
     wire [5:0] intermed_compactState_Z;
     wire signed [(expWidth + 1):0] intermed_sExp_Z;
     wire [(clog2(sigWidth + 1) - 1):0] intermed_CDom_CAlignDist_Z;
     wire [(sigWidth + 1):0] intermed_highAlignedSigC_Z;
-    wire [2:0]roundingMode_Z;
-    wire [sigWidth*2:0] mulAddResult = mulAddA_Z * mulAddB_Z + mulAddC_Z;
+    wire [2:0] roundingMode_Z;
 
-    bsg_dff_chain#(sigWidth*4, latencyDstr[0])
+    bsg_dff_chain#(sigWidth*4, pipeline[0])
         preDSP (
             .clk_i(clock),
             .data_i({mulAddA, mulAddB, mulAddC}),
             .data_o({mulAddA_Z, mulAddB_Z, mulAddC_Z})
         );
 
-    bsg_dff_chain#(sigWidth*2+1, latencyDstr[1])
+    bsg_dff_chain#(sigWidth*2+1, pipeline[1])
         postDSP (
             .clk_i(clock),
             .data_i(mulAddResult),
             .data_o(mulAddResult_Z)
         );
 
+
     bsg_dff_chain#($bits({intermed_compactState, intermed_sExp, intermed_CDom_CAlignDist, intermed_highAlignedSigC, roundingMode}),
-            latencyDstr[0]+latencyDstr[1])
+            pipeline[0]+pipeline[1])
         shunt (
             .clk_i(clock),
             .data_i({intermed_compactState, intermed_sExp, intermed_CDom_CAlignDist, intermed_highAlignedSigC, roundingMode}),
@@ -500,7 +500,7 @@ module
     mulAddRecFN#(
         parameter expWidth = 3,
         parameter sigWidth = 3,
-        parameter int latencyDstr[0:1] = '{0,0},
+        parameter int pipeline[0:1] = '{0,0},
         parameter imulEn = 1'b1
     ) ( input clock,
         input [(`floatControlWidth - 1):0] control,
@@ -518,7 +518,7 @@ module
     wire signed [(expWidth + 1):0] out_sExp;
     wire [(sigWidth + 2):0] out_sig;
 
-    mulAddRecFNToRaw#(expWidth, sigWidth, latencyDstr, imulEn)
+    mulAddRecFNToRaw#(expWidth, sigWidth, pipeline, imulEn)
         mulAddRecFNToRaw(
             clock,
             control,
