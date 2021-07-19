@@ -373,6 +373,7 @@ module
 endmodule
 
 /*----------------------------------------------------------------------------
+ * TODO: remove after bsg_mul_add.v implementation
  * 'pipeline' is used to insert pipelining registers in the following manner:
  *
  *      preMul
@@ -391,7 +392,7 @@ module
     mulAddRecFNToRaw#(
         parameter expWidth = 3,
         parameter sigWidth = 3,
-        parameter int pipeline[0:1] = '{0,0},
+        parameter pipelineStages = 0, //no pipelining, default: 0; 64b, Zynq 7020 @ 50 MHz: 3
         parameter imulEn = 1'b1 // set 1 to enable integer MUL.
     ) ( input clock,
         input [(`floatControlWidth - 1):0] control,
@@ -416,44 +417,17 @@ module
 
     wire [(sigWidth - 1):0] mulAddA, mulAddB;
     wire [(sigWidth*2 - 1):0] mulAddC;
+    wire [sigWidth*2:0] mulAddResult;
     wire [5:0] intermed_compactState;
     wire signed [(expWidth + 1):0] intermed_sExp;
     wire [(clog2(sigWidth + 1) - 1):0] intermed_CDom_CAlignDist;
     wire [(sigWidth + 1):0] intermed_highAlignedSigC;
-
-    wire [(sigWidth - 1):0] mulAddA_Z, mulAddB_Z;
-    wire [(sigWidth*2 - 1):0] mulAddC_Z;
-    wire [sigWidth*2:0] mulAddResult = mulAddA_Z * mulAddB_Z + mulAddC_Z;
-    wire [sigWidth*2:0] mulAddResult_Z;
 
     wire [5:0] intermed_compactState_Z;
     wire signed [(expWidth + 1):0] intermed_sExp_Z;
     wire [(clog2(sigWidth + 1) - 1):0] intermed_CDom_CAlignDist_Z;
     wire [(sigWidth + 1):0] intermed_highAlignedSigC_Z;
     wire [2:0] roundingMode_Z;
-
-    bsg_dff_chain#(sigWidth*4, pipeline[0])
-        preDSP (
-            .clk_i(clock),
-            .data_i({mulAddA, mulAddB, mulAddC}),
-            .data_o({mulAddA_Z, mulAddB_Z, mulAddC_Z})
-        );
-
-    bsg_dff_chain#(sigWidth*2+1, pipeline[1])
-        postDSP (
-            .clk_i(clock),
-            .data_i(mulAddResult),
-            .data_o(mulAddResult_Z)
-        );
-
-
-    bsg_dff_chain#($bits({intermed_compactState, intermed_sExp, intermed_CDom_CAlignDist, intermed_highAlignedSigC, roundingMode}),
-            pipeline[0]+pipeline[1])
-        shunt (
-            .clk_i(clock),
-            .data_i({intermed_compactState, intermed_sExp, intermed_CDom_CAlignDist, intermed_highAlignedSigC, roundingMode}),
-            .data_o({intermed_compactState_Z, intermed_sExp_Z, intermed_CDom_CAlignDist_Z, intermed_highAlignedSigC_Z, roundingMode_Z})
-        );
 
     mulAddRecFNToRaw_preMul#(expWidth, sigWidth, imulEn)
         mulAddToRaw_preMul(
@@ -472,15 +446,33 @@ module
             intermed_highAlignedSigC
         );
     
-    
     // MAC
+    bsg_mul_add#(sigWidth, sigWidth, 2*sigWidth+1, pipelineStages)
+        mulAdd (
+            .clk_i(clock),
+            .a_i(mulAddA),
+            .b_i(mulAddB),
+            .c_i(mulAddC),
+            .o(mulAddResult)
+        );
+
+    bsg_dff_chain#($bits({intermed_compactState, intermed_sExp, intermed_CDom_CAlignDist, 
+            intermed_highAlignedSigC, roundingMode}), pipelineStages)
+        shuntMulAdd (
+            .clk_i(clock),
+            .data_i({intermed_compactState, intermed_sExp, intermed_CDom_CAlignDist, 
+                intermed_highAlignedSigC, roundingMode}),
+            .data_o({intermed_compactState_Z, intermed_sExp_Z, intermed_CDom_CAlignDist_Z, 
+                intermed_highAlignedSigC_Z, roundingMode_Z})
+        );
+
     mulAddRecFNToRaw_postMul#(expWidth, sigWidth)
         mulAddToRaw_postMul(
             intermed_compactState_Z,
             intermed_sExp_Z,
             intermed_CDom_CAlignDist_Z,
             intermed_highAlignedSigC_Z,
-            mulAddResult_Z,
+            mulAddResult,
             roundingMode_Z,
             invalidExc,
             out_isNaN,
@@ -490,7 +482,7 @@ module
             out_sExp,
             out_sig
         );
-    assign out_imul = mulAddResult_Z[expWidth + sigWidth-1:0];
+    assign out_imul = mulAddResult[expWidth + sigWidth-1:0];
 endmodule
 
 /*----------------------------------------------------------------------------
@@ -500,7 +492,7 @@ module
     mulAddRecFN#(
         parameter expWidth = 3,
         parameter sigWidth = 3,
-        parameter int pipeline[0:1] = '{0,0},
+        parameter pipelineStages = 0,
         parameter imulEn = 1'b1
     ) ( input clock,
         input [(`floatControlWidth - 1):0] control,
@@ -518,7 +510,7 @@ module
     wire signed [(expWidth + 1):0] out_sExp;
     wire [(sigWidth + 2):0] out_sig;
 
-    mulAddRecFNToRaw#(expWidth, sigWidth, pipeline, imulEn)
+    mulAddRecFNToRaw#(expWidth, sigWidth, pipelineStages, imulEn)
         mulAddRecFNToRaw(
             clock,
             control,
