@@ -373,19 +373,6 @@ module
 endmodule
 
 /*----------------------------------------------------------------------------
- * TODO: remove after bsg_mul_add.v implementation
- * 'pipeline' is used to insert pipelining registers in the following manner:
- *
- *      preMul
- *       /  \
- *      0    0        -> pipeline[0]
- *      |  mulAdd     -> Integer MulAdd (uses DSP on Zynq 7020)
- *      1    1        -> pipeline[1]
- *       \  /
- *      postMul
- *
- *  - No pipelining (default)   : '{0,0}
- *  - 64 bit, Zynq 7020 @ 50 MHz: '{1,2}
  *----------------------------------------------------------------------------*/
 
 module
@@ -418,15 +405,10 @@ module
     wire [(sigWidth - 1):0] mulAddA, mulAddB;
     wire [(sigWidth*2 - 1):0] mulAddC;
     wire [sigWidth*2:0] mulAddResult;
-    wire [5:0] intermed_compactState;
-    wire signed [(expWidth + 1):0] intermed_sExp;
-    wire [(clog2(sigWidth + 1) - 1):0] intermed_CDom_CAlignDist;
-    wire [(sigWidth + 1):0] intermed_highAlignedSigC;
-
-    wire [5:0] intermed_compactState_Z;
-    wire signed [(expWidth + 1):0] intermed_sExp_Z;
-    wire [(clog2(sigWidth + 1) - 1):0] intermed_CDom_CAlignDist_Z;
-    wire [(sigWidth + 1):0] intermed_highAlignedSigC_Z;
+    wire [5:0] intermed_compactState, intermed_compactState_Z;
+    wire signed [(expWidth + 1):0] intermed_sExp, intermed_sExp_Z;
+    wire [(clog2(sigWidth + 1) - 1):0] intermed_CDom_CAlignDist, intermed_CDom_CAlignDist_Z;
+    wire [(sigWidth + 1):0] intermed_highAlignedSigC, intermed_highAlignedSigC_Z;
     wire [2:0] roundingMode_Z;
 
     mulAddRecFNToRaw_preMul#(expWidth, sigWidth, imulEn)
