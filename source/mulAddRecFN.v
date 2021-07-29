@@ -429,7 +429,7 @@ module
         );
     
     // MAC
-    bsg_mul_add#(sigWidth, sigWidth, 2*sigWidth+1, pipelineStages)
+    bsg_mul_add_unsigned#(sigWidth, sigWidth, 2*sigWidth+1, pipelineStages)
         mulAdd (
             .clk_i(clock),
             .a_i(mulAddA),
@@ -536,7 +536,7 @@ module
     bsg_dff_chain#($bits({roundingMode, control}), pipelineStages[0] + pipelineStages[1])
     shunt (
         .clk_i(clock),
-        .data_i({roundingMode, control})
+        .data_i({roundingMode, control}),
         .data_o({roundingMode_Z, control_Z})
     );
 
