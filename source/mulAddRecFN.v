@@ -524,7 +524,7 @@ module
             out_imul
         );
 
-    bsg_dff_chain #(5 + $bits({out_sExp_Z, out_sig_Z}), pipelineStages[1])
+    bsg_dff_chain#(5 + $bits({out_sExp_Z, out_sig_Z}), pipelineStages[1])
     pre_round (
         .clk_i(clock),
         .data_i({invalidExc, out_isNaN, out_isInf, out_isZero, out_sign, 
@@ -533,7 +533,7 @@ module
                   out_sExp_Z, out_sig_Z})
     );
 
-    bsg_dff_chain #($bits{roundingMode, control}, pipelineStages[0] + pipelineStages[1])
+    bsg_dff_chain#($bits({roundingMode, control}), pipelineStages[0] + pipelineStages[1])
     shunt (
         .clk_i(clock),
         .data_i({roundingMode, control})
