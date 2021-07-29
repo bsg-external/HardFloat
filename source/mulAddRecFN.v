@@ -468,13 +468,23 @@ module
 endmodule
 
 /*----------------------------------------------------------------------------
-*----------------------------------------------------------------------------*/
+ *  pipelineStages is used to insert pipelining registers according to the 
+ *  following placement:
+ *   ...            ...
+ *    |       mulAddRecFNToRaw     -> consumes pipeline_p[0]
+ *    |        |       |
+ *  shunt  pre_round   |           -> consumes pipeline_p[1]
+ *     \       /       |
+ *    roundRawOut      |
+ *          |          |
+ *       fma_out   imul_out
+ *----------------------------------------------------------------------------*/
 
 module
     mulAddRecFN#(
         parameter expWidth = 3,
         parameter sigWidth = 3,
-        parameter pipelineStages = 0,
+        parameter int pipelineStages[0:1] = {0,0},
         parameter imulEn = 1'b1
     ) ( input clock,
         input [(`floatControlWidth - 1):0] control,
@@ -489,10 +499,13 @@ module
     );
 
     wire invalidExc, out_isNaN, out_isInf, out_isZero, out_sign;
-    wire signed [(expWidth + 1):0] out_sExp;
-    wire [(sigWidth + 2):0] out_sig;
+    wire invalidExc_Z, out_isNaN_Z, out_isInf_Z, out_isZero_Z, out_sign_Z;
+    wire signed [(expWidth + 1):0] out_sExp, out_sExp_Z;
+    wire [(sigWidth + 2):0] out_sig, out_sig_Z;
+    wire [2:0] roundingMode_Z;
+    wire [(`floatControlWidth - 1):0] control_Z;
 
-    mulAddRecFNToRaw#(expWidth, sigWidth, pipelineStages, imulEn)
+    mulAddRecFNToRaw#(expWidth, sigWidth, pipelineStages[0], imulEn)
         mulAddRecFNToRaw(
             clock,
             control,
@@ -510,18 +523,35 @@ module
             out_sig,
             out_imul
         );
+
+    bsg_dff_chain #(5 + $bits({out_sExp_Z, out_sig_Z}), pipelineStages[1])
+    pre_round (
+        .clk_i(clock),
+        .data_i({invalidExc, out_isNaN, out_isInf, out_isZero, out_sign, 
+                  out_sExp, out_sig}),
+        .data_o({invalidExc_Z, out_isNaN_Z, out_isInf_Z, out_isZero_Z, out_sign_Z, 
+                  out_sExp_Z, out_sig_Z})
+    );
+
+    bsg_dff_chain #($bits{roundingMode, control}, pipelineStages[0] + pipelineStages[1])
+    shunt (
+        .clk_i(clock),
+        .data_i({roundingMode, control})
+        .data_o({roundingMode_Z, control_Z})
+    );
+
     roundRawFNToRecFN#(expWidth, sigWidth, 0)
         roundRawOut(
-            control,
-            invalidExc,
+            control_Z,
+            invalidExc_Z,
             1'b0,
-            out_isNaN,
-            out_isInf,
-            out_isZero,
-            out_sign,
-            out_sExp,
-            out_sig,
-            roundingMode,
+            out_isNaN_Z,
+            out_isInf_Z,
+            out_isZero_Z,
+            out_sign_Z,
+            out_sExp_Z,
+            out_sig_Z,
+            roundingMode_Z,
             out,
             exceptionFlags
         );
