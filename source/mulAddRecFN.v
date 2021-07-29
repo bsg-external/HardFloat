@@ -429,7 +429,7 @@ module
         );
     
     // MAC
-    bsg_mul_add_unsigned#(sigWidth, sigWidth, 2*sigWidth+1, pipelineStages)
+    bsg_mul_add_unsigned#(sigWidth, sigWidth, 2*sigWidth, 2*sigWidth+1, pipelineStages)
         mulAdd (
             .clk_i(clock),
             .a_i(mulAddA),
