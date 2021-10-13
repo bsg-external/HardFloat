@@ -322,9 +322,15 @@ module
         compressBy2_notCDom_absSigSum(
             notCDom_absSigSum, notCDom_reduced2AbsSigSum);
     wire [(clog2(prodWidth + 4) - 2):0] notCDom_normDistReduced2;
-    countLeadingZeros#((prodWidth + 2)/2 + 1, clog2(prodWidth + 4) - 1)
-        countLeadingZeros_notCDom(
-            notCDom_reduced2AbsSigSum, notCDom_normDistReduced2);
+    //countLeadingZeros#((prodWidth + 2)/2 + 1, clog2(prodWidth + 4) - 1)
+    //    countLeadingZeros_notCDom(
+    //        notCDom_reduced2AbsSigSum, notCDom_normDistReduced2);
+    bsg_counting_leading_zeros #(
+      .width_p((prodWidth + 2)/2 + 1)
+    ) clz (
+      .a_i(notCDom_reduced2AbsSigSum)
+      ,.num_zero_o(notCDom_normDistReduced2)
+    );
     wire [(clog2(prodWidth + 4) - 1):0] notCDom_nearNormDist =
         notCDom_normDistReduced2<<1;
     wire signed [(expWidth + 1):0] notCDom_sExp =
