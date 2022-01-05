@@ -490,7 +490,7 @@ module
     mulAddRecFN#(
         parameter expWidth = 3,
         parameter sigWidth = 3,
-        parameter int pipelineStages[0:1] = {0,0},
+     parameter int pipelineStages[1:0] = {0,0},
         parameter imulEn = 1'b1
     ) ( input clock,
         input [(`floatControlWidth - 1):0] control,
