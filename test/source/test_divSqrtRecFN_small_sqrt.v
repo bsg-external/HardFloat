@@ -68,7 +68,7 @@ module
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
     reg integer delay;
-    always @(negedge nReset, posedge clock) begin
+    always @(posedge clock) begin
         if (!nReset) begin
             delay <= 0;
         end else begin
