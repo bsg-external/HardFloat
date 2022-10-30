@@ -167,7 +167,7 @@ module
     wire entering = inReady && inValid;
     wire entering_normalCase = entering && normalCase_S;
     wire skipCycle2 = (cycleNum == 3) && sigX_Z[sigWidth + 1];
-    always @(negedge nReset, posedge clock) begin
+    always @(posedge clock) begin
         if (!nReset) begin
             cycleNum <= 0;
         end else begin
