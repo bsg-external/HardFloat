@@ -358,3 +358,119 @@ module
 
 endmodule
 
+// DWP (BSG) 02/01/2023
+// This module is used for mixed-precision operations
+// The input is a RAW FP value which is then
+//   - rounded to the max precision
+//   - rounded to an intermediate precision and upconverted back to a higher precision
+// Output is recoded
+
+module
+    roundRawFNtoRecFN_mixed#(
+      parameter fullExpWidth = 3,
+      parameter fullSigWidth = 3,
+      parameter midExpWidth = 3,
+      parameter midSigWidth = 3,
+      parameter outExpWidth = 3,
+      parameter outSigWidth = 3
+  ) (
+      input [(`floatControlWidth - 1):0] control,
+      input invalidExc,     // overrides 'infiniteExc' and 'in_*' inputs
+      input infiniteExc,    // overrides 'in_*' inputs except 'in_sign'
+      input in_isNaN,
+      input in_isInf,
+      input in_isZero,
+      input in_sign,
+      input signed [(fullExpWidth + 1):0] in_sExp,   // limited range allowed
+      input [(fullSigWidth + 2):0] in_sig,
+      input [2:0] roundingMode,
+      output [(outExpWidth + outSigWidth):0] fullOut,
+      output [4:0] fullExceptionFlags,
+      output [(outExpWidth + outSigWidth):0] midOut,
+      output [4:0] midExceptionFlags
+  );
+
+  // synopsys translate_off
+  if ((midExpWidth > fullExpWidth) || (midSigWidth > fullSigWidth))
+    $error("Intermediate rounding must be smaller than input");
+
+  if ((midExpWidth > outExpWidth) || (midSigWidth > outSigWidth))
+    $error("Intermediate rounding must be smaller than output");
+  // synopsys translate_on
+
+  logic [(fullExpWidth + fullSigWidth):0] fullResult;
+  logic [4:0] fullFlags;
+  roundAnyRawFNToRecFN
+   #(.inExpWidth(fullExpWidth)
+     ,.inSigWidth(fullSigWidth+2) // See the HardFloat docs for an explanation
+     ,.outExpWidth(outExpWidth)
+     ,.outSigWidth(outSigWidth)
+     )
+   round64
+    (.control(control)
+     ,.invalidExc(invalidExc)
+     ,.infiniteExc(infiniteExc)
+     ,.in_isNaN(in_isNaN)
+     ,.in_isInf(in_isInf)
+     ,.in_isZero(in_isZero)
+     ,.in_sign(in_sign)
+     ,.in_sExp(in_sExp)
+     ,.in_sig(in_sig)
+     ,.roundingMode(roundingMode)
+
+     ,.out(fullResult)
+     ,.exceptionFlags(fullFlags)
+     );
+
+  logic [(midExpWidth + midSigWidth):0] midResult;
+  logic [4:0] midFlags;
+  roundAnyRawFNToRecFN
+   #(.inExpWidth(fullExpWidth)
+     ,.inSigWidth(fullSigWidth+2) // See the HardFloat docs for an explanation
+     ,.outExpWidth(midExpWidth)
+     ,.outSigWidth(midSigWidth)
+     )
+   round32
+    (.control(control)
+     ,.invalidExc(invalidExc)
+     ,.infiniteExc(infiniteExc)
+     ,.in_isNaN(in_isNaN)
+     ,.in_isInf(in_isInf)
+     ,.in_isZero(in_isZero)
+     ,.in_sign(in_sign)
+     ,.in_sExp(in_sExp)
+     ,.in_sig(in_sig)
+     ,.roundingMode(roundingMode)
+
+     ,.out(midResult)
+     ,.exceptionFlags(midFlags)
+     );
+
+  //
+  // "Unsafe" upconvert (Made safe because we've already rounded)
+  //
+  localparam biasAdj = (1 << outExpWidth) - (1 << midExpWidth);
+  wire [outExpWidth:0] nanExp = {outExpWidth+1{1'b1}};
+  wire [outExpWidth:0] infExp = 2'b11 << (outExpWidth-1);
+  wire [outExpWidth:0] zeroExp = {outExpWidth+1{1'b0}};
+
+  wire [fullSigWidth-2:0] fullFract = fullResult[0+:fullSigWidth-1];
+  wire [fullExpWidth:0] fullExp = fullResult[fullSigWidth-1+:fullExpWidth+1];
+  wire fullSign = fullResult[fullSigWidth+fullExpWidth];
+
+  wire [outSigWidth-2:0] midFract = midResult[0+:midSigWidth-1];
+  wire [outExpWidth:0] midExp = midResult[midSigWidth-1+:midExpWidth+1];
+  wire [outExpWidth:0] midExpAdjusted =
+        in_isNaN ? nanExp
+      : in_isInf ? infExp
+      : in_isZero ? zeroExp
+      : (midExp + biasAdj);
+  wire midSign = midResult[midSigWidth+midExpWidth];
+
+  assign fullOut = {fullSign, fullExp, fullFract};
+  assign fullExceptionFlags = fullFlags;
+  assign midOut = {midSign, midExp, midFract};
+  assign midExceptionFlags = midFlags;
+
+endmodule
+
