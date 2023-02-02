@@ -399,7 +399,6 @@ module
   // synopsys translate_on
 
   logic [(fullExpWidth + fullSigWidth):0] fullResult;
-  logic [4:0] fullFlags;
   roundAnyRawFNToRecFN
    #(.inExpWidth(fullExpWidth)
      ,.inSigWidth(fullSigWidth+2) // See the HardFloat docs for an explanation
@@ -418,8 +417,8 @@ module
      ,.in_sig(in_sig)
      ,.roundingMode(roundingMode)
 
-     ,.out(fullResult)
-     ,.exceptionFlags(fullFlags)
+     ,.out(fullOut)
+     ,.exceptionFlags(fullExceptionFlags)
      );
 
   logic [(midExpWidth + midSigWidth):0] midResult;
@@ -443,46 +442,19 @@ module
      ,.roundingMode(roundingMode)
 
      ,.out(midResult)
-     ,.exceptionFlags(midFlags)
+     ,.exceptionFlags(midExceptionFlags)
      );
 
-  //
-  // "Unsafe" upconvert (Made safe because we've already rounded)
-  //
-  localparam biasAdj = (1 << outExpWidth) - (1 << midExpWidth);
-  localparam sigAdj = (outSigWidth - midSigWidth);
-  wire [outExpWidth:0] nanExp = 3'b111 << (outExpWidth-2);
-  wire [outExpWidth:0] infExp = 2'b11 << (outExpWidth-1);
-  wire [outExpWidth:0] zeroExp = {outExpWidth+1{1'b0}};
-
-  wire [fullSigWidth-2:0] fullFract = fullResult[0+:fullSigWidth-1];
-  wire [fullExpWidth:0] fullExp = fullResult[fullSigWidth-1+:fullExpWidth+1];
-  wire fullSign = fullResult[fullSigWidth+fullExpWidth];
-
-  wire [outSigWidth-2:0] midFract = midResult[0+:midSigWidth-1];
-  wire [outSigWidth-2:0] midFractAdjusted =
-        invalidExc ? {1'b1, {outSigWidth-2{1'b0}}}
-      : in_isNaN   ? {1'b1, {outSigWidth-2{1'b0}}}
-      : in_isInf   ? {outSigWidth-1{1'b0}}
-      : in_isZero  ? {outSigWidth-1{1'b0}}
-      : (midFract << sigAdj);
-  wire [outExpWidth:0] midExp = midResult[midSigWidth-1+:midExpWidth+1];
-  wire [outExpWidth:0] midExpAdjusted =
-        invalidExc ? nanExp
-      : in_isNaN   ? nanExp
-      : in_isInf   ? infExp
-      : in_isZero  ? zeroExp
-      : (midExp + biasAdj);
-  wire midSign = midResult[midSigWidth+midExpWidth];
-  wire midSignAdjusted =
-        invalidExc ? 1'b0
-      : in_isNaN   ? 1'b0
-      : midSign;
-
-  assign fullOut = {fullSign, fullExp, fullFract};
-  assign fullExceptionFlags = fullFlags;
-  assign midOut = {midSignAdjusted, midExpAdjusted, midFractAdjusted};
-  assign midExceptionFlags = midFlags;
+  recFNToRecFN_unsafe
+   #(.inExpWidth(midExpWidth)
+     ,.inSigWidth(midSigWidth)
+     ,.outExpWidth(outExpWidth)
+     ,.outSigWidth(outSigWidth)
+     )
+   recover
+    (.in(midResult)
+     ,.out(midOut)
+     );
 
 endmodule
 
