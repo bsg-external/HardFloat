@@ -450,6 +450,7 @@ module
   // "Unsafe" upconvert (Made safe because we've already rounded)
   //
   localparam biasAdj = (1 << outExpWidth) - (1 << midExpWidth);
+  localparam sigAdj = (outSigWidth - midSigWidth);
   wire [outExpWidth:0] nanExp = {outExpWidth+1{1'b1}};
   wire [outExpWidth:0] infExp = 2'b11 << (outExpWidth-1);
   wire [outExpWidth:0] zeroExp = {outExpWidth+1{1'b0}};
@@ -458,7 +459,7 @@ module
   wire [fullExpWidth:0] fullExp = fullResult[fullSigWidth-1+:fullExpWidth+1];
   wire fullSign = fullResult[fullSigWidth+fullExpWidth];
 
-  wire [outSigWidth-2:0] midFract = midResult[0+:midSigWidth-1];
+  wire [outSigWidth-2:0] midFract = (midResult[0+:midSigWidth-1] << sigAdj);
   wire [outExpWidth:0] midExp = midResult[midSigWidth-1+:midExpWidth+1];
   wire [outExpWidth:0] midExpAdjusted =
         in_isNaN ? nanExp
@@ -469,7 +470,7 @@ module
 
   assign fullOut = {fullSign, fullExp, fullFract};
   assign fullExceptionFlags = fullFlags;
-  assign midOut = {midSign, midExp, midFract};
+  assign midOut = {midSign, midExpAdjusted, midFract};
   assign midExceptionFlags = midFlags;
 
 endmodule
