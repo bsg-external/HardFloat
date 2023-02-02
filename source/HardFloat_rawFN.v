@@ -403,8 +403,8 @@ module
   roundAnyRawFNToRecFN
    #(.inExpWidth(fullExpWidth)
      ,.inSigWidth(fullSigWidth+2) // See the HardFloat docs for an explanation
-     ,.outExpWidth(outExpWidth)
-     ,.outSigWidth(outSigWidth)
+     ,.outExpWidth(fullExpWidth)
+     ,.outSigWidth(fullSigWidth)
      )
    round64
     (.control(control)

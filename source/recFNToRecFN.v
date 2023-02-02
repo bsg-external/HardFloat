@@ -110,3 +110,62 @@ module
 
 endmodule
 
+// DWP (BSG): This module converts between precisions when exactness can be guaranteed
+//   and therefore rounding is not needed
+module
+    recFNToRecFN_unsafe#(
+        parameter inExpWidth = 3,
+        parameter inSigWidth = 3,
+        parameter outExpWidth = 3,
+        parameter outSigWidth = 3
+    ) (
+        input [(inExpWidth + inSigWidth):0] in,
+        output [(outExpWidth + outSigWidth):0] out
+    );
+
+    wire sign;
+    wire [inExpWidth:0] exp;
+    wire [(inSigWidth - 2):0] fract;
+    assign {sign, exp, fract} = in;
+
+    wire isSpecial = (exp>>(inExpWidth - 1) == 'b11);
+    wire isNaN = isSpecial &&  exp[inExpWidth - 2];
+    wire isInf = isSpecial && !exp[inExpWidth - 2];
+    wire isZero = (exp>>(inExpWidth - 2) == 'b000);
+
+    localparam biasAdj = (1 << outExpWidth) - (1 << inExpWidth);
+    localparam sigAdj = (outSigWidth - inSigWidth);
+    wire [outExpWidth:0] nanExp = 3'b111 << (outExpWidth-2);
+    wire [outExpWidth:0] infExp = 2'b11 << (outExpWidth-1);
+    wire [outExpWidth:0] zeroExp = {outExpWidth+1{1'b0}};
+
+    wire [outSigWidth-2:0] inFract = in[0+:inSigWidth-1];
+    wire [outSigWidth-2:0] inFractAdjusted;
+    if (outSigWidth > inSigWidth) begin
+        assign inFractAdjusted =
+              isNaN   ? {1'b1, {outSigWidth-2{1'b0}}}
+            : isInf   ? {outSigWidth-1{1'b0}}
+            : isZero  ? {outSigWidth-1{1'b0}}
+            : (inFract << sigAdj);
+    end else begin
+        assign inFractAdjusted =
+              isNaN   ? {1'b1, {outSigWidth-2{1'b0}}}
+            : isInf   ? {outSigWidth-1{1'b0}}
+            : isZero  ? {outSigWidth-1{1'b0}}
+            : inFract[inSigWidth-2:inSigWidth-outSigWidth];
+    end
+    wire [outExpWidth:0] inExp = in[inSigWidth-1+:inExpWidth+1];
+    wire [outExpWidth:0] inExpAdjusted =
+          isNaN   ? nanExp
+        : isInf   ? infExp
+        : isZero  ? zeroExp
+        : (inExp + biasAdj);
+    wire inSign = in[inSigWidth+inExpWidth];
+    wire inSignAdjusted =
+          isNaN   ? 1'b0
+        : inSign;
+
+    assign out = {inSignAdjusted, inExpAdjusted, inFractAdjusted};
+
+endmodule
+
