@@ -451,7 +451,7 @@ module
   //
   localparam biasAdj = (1 << outExpWidth) - (1 << midExpWidth);
   localparam sigAdj = (outSigWidth - midSigWidth);
-  wire [outExpWidth:0] nanExp = {outExpWidth+1{1'b1}};
+  wire [outExpWidth:0] nanExp = 3'b111 << (outExpWidth-2);
   wire [outExpWidth:0] infExp = 2'b11 << (outExpWidth-1);
   wire [outExpWidth:0] zeroExp = {outExpWidth+1{1'b0}};
 
@@ -459,18 +459,29 @@ module
   wire [fullExpWidth:0] fullExp = fullResult[fullSigWidth-1+:fullExpWidth+1];
   wire fullSign = fullResult[fullSigWidth+fullExpWidth];
 
-  wire [outSigWidth-2:0] midFract = (midResult[0+:midSigWidth-1] << sigAdj);
+  wire [outSigWidth-2:0] midFract = midResult[0+:midSigWidth-1];
+  wire [outSigWidth-2:0] midFractAdjusted =
+        invalidExc ? {1'b1, {outSigWidth-2{1'b0}}}
+      : in_isNaN   ? {1'b1, {outSigWidth-2{1'b0}}}
+      : in_isInf   ? {outSigWidth-1{1'b0}}
+      : in_isZero  ? {outSigWidth-1{1'b0}}
+      : (midFract << sigAdj);
   wire [outExpWidth:0] midExp = midResult[midSigWidth-1+:midExpWidth+1];
   wire [outExpWidth:0] midExpAdjusted =
-        in_isNaN ? nanExp
-      : in_isInf ? infExp
-      : in_isZero ? zeroExp
+        invalidExc ? nanExp
+      : in_isNaN   ? nanExp
+      : in_isInf   ? infExp
+      : in_isZero  ? zeroExp
       : (midExp + biasAdj);
   wire midSign = midResult[midSigWidth+midExpWidth];
+  wire midSignAdjusted =
+        invalidExc ? 1'b0
+      : in_isNaN   ? 1'b0
+      : midSign;
 
   assign fullOut = {fullSign, fullExp, fullFract};
   assign fullExceptionFlags = fullFlags;
-  assign midOut = {midSign, midExpAdjusted, midFract};
+  assign midOut = {midSignAdjusted, midExpAdjusted, midFractAdjusted};
   assign midExceptionFlags = midFlags;
 
 endmodule
