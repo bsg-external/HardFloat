@@ -99,8 +99,7 @@ module
     reg sqrtOp_Z, majorExc_Z;
     reg isNaN_Z, isInf_Z, isZero_Z, sign_Z;
     reg signed [(expWidth + 1):0] sExp_Z;
-    reg [(sigWidth - 2):0] fractB_Z;
-    //wire [(sigWidth - 2):0] fractB_Z = sigB_S[(sigWidth - 2):0];	
+    reg [(sigWidth - 2):0] fractB_Z;	
     reg [2:0] roundingMode_Z;
     /*------------------------------------------------------------------------
     | (The most-significant and least-significant bits of 'rem_Z' are needed
@@ -173,11 +172,6 @@ module
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
     wire [1:0] decHiSigA_S = sigA_S[(sigWidth - 1):(sigWidth - 2)] - 1;
-    /*wire [(sigWidth + 2):0] rem =
-          (inReady && !oddSqrt_S ? sigA_S<<1 : 0)
-        | (inReady &&  oddSqrt_S
-               ? {decHiSigA_S, sigA_S[(sigWidth - 3):0], 3'b0} : 0)
-        | (!inReady ? rem_Z<<1 : 0);*/
 	wire [(sigWidth + 2):0] rem = inReady ? 
 									(oddSqrt_S ? 
 										{decHiSigA_S, sigA_S[(sigWidth - 3):0], 3'b0}
@@ -191,16 +185,6 @@ module
         | ( inReady && oddSqrt_S  ? 5<<(sigWidth - 1)   : 0)
         | (!inReady && !sqrtOp_Z    ? {1'b1, fractB_Z}<<1 : 0)
         | (!inReady &&  sqrtOp_Z  ? sigX_Z<<1 | bitMask : 0);
-	
-    /*wire [(sigWidth + 1):0] trialTerm =	inReady
-        ? (sqrtOp
-			? (evenSqrt_S
-				? 1<<sigWidth 
-				: 5<<(sigWidth - 1))
-			: sigB_S<<1)
-		: (sqrtOp_Z 
-			? sigX_Z<<1 | bitMask
-			: {1'b1, fractB_Z}<<1);*/
 			
     wire signed [(sigWidth + 3):0] trialRem1 = rem - trialTerm;
 	wire newBit1 = (0 <= trialRem1);
@@ -248,5 +232,85 @@ module
     assign out_sign   = sign_Z;
     assign out_sExp   = sExp_Z;
     assign out_sig    = {sigX_Z, notZeroRem_Z};
+
+endmodule
+
+/*----------------------------------------------------------------------------
+*----------------------------------------------------------------------------*/
+
+module
+    divSqrtRecFN_medium#(
+        parameter expWidth = 8, parameter sigWidth = 24, parameter options = 0
+    ) (
+        /*--------------------------------------------------------------------
+        *--------------------------------------------------------------------*/
+        input nReset,
+        input clock,
+        /*--------------------------------------------------------------------
+        *--------------------------------------------------------------------*/
+        input [(`floatControlWidth - 1):0] control,
+        /*--------------------------------------------------------------------
+        *--------------------------------------------------------------------*/
+        output inReady,
+        input inValid,
+        input sqrtOp,
+        input [(expWidth + sigWidth):0] a,
+        input [(expWidth + sigWidth):0] b,
+        input [2:0] roundingMode,
+        /*--------------------------------------------------------------------
+        *--------------------------------------------------------------------*/
+        output outValid,
+        output sqrtOpOut,
+        output [(expWidth + sigWidth):0] out,
+        output [4:0] exceptionFlags
+    );
+
+    /*------------------------------------------------------------------------
+    *------------------------------------------------------------------------*/
+    //wire sqrtOpOut;
+    wire [2:0] roundingModeOut;
+    wire invalidExc, infiniteExc, out_isNaN, out_isInf, out_isZero, out_sign;
+    wire signed [(expWidth + 1):0] out_sExp;
+    wire [(sigWidth + 2):0] out_sig;
+    divSqrtRecFNToRaw_medium#(expWidth, sigWidth, options)
+        divSqrtRecFNToRaw(
+            nReset,
+            clock,
+            control,
+            inReady,
+            inValid,
+            sqrtOp,
+            a,
+            b,
+            roundingMode,
+            outValid,
+            sqrtOpOut,
+            roundingModeOut,
+            invalidExc,
+            infiniteExc,
+            out_isNaN,
+            out_isInf,
+            out_isZero,
+            out_sign,
+            out_sExp,
+            out_sig
+        );
+    /*------------------------------------------------------------------------
+    *------------------------------------------------------------------------*/
+    roundRawFNToRecFN#(expWidth, sigWidth, 0)
+        roundRawOut(
+            control,
+            invalidExc,
+            infiniteExc,
+            out_isNaN,
+            out_isInf,
+            out_isZero,
+            out_sign,
+            out_sExp,
+            out_sig,
+            roundingModeOut,
+            out,
+            exceptionFlags
+        );
 
 endmodule
