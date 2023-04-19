@@ -40,7 +40,7 @@ module
         output signed [(expWidth + 1):0] out_sExp,
         output [(sigWidth + 2):0] out_sig
     );
-`include "HardFloat_localFuncs.vi"
+    `include "HardFloat_localFuncs.vi"
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
@@ -115,7 +115,7 @@ module
     wire entering = inReady && inValid;
     wire entering_normalCase = entering && normalCase_S;
     wire skipCycle2 = (cycleNum == 4) && sigX_Z[sigWidth + 1];  
-	wire step1Case = skipCycle2 || (cycleNum <= 2);
+    wire step1Case = skipCycle2 || (cycleNum <= 2);
 
     always @(posedge clock) begin
         if (!nReset) begin
@@ -126,15 +126,16 @@ module
                       (entering && !normalCase_S ? 1 : 0)
                     | (entering_normalCase
                            ? (sqrtOp ? (sExpA_S[0] ? sigWidth : sigWidth + 1)
-                                  : sigWidth + 2)
+                                     : sigWidth + 2)
                            : 0)
-				    | (!idle ? (cycleNum - (step1Case ? 1 : 2)) : 0);
+		    | (!idle ? (cycleNum - (step1Case ? 1 : 2)) : 0);
             end 
         end
     end
-
+		
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
+	
     always @(posedge clock) begin
       if (!nReset) begin
             sqrtOp_Z <= 1'b0;
@@ -157,9 +158,8 @@ module
             sign_Z <= sign_S;
         end
         if (entering_normalCase) begin
-            sExp_Z <=
-                sqrtOp ? (sExpA_S>>>1) + (1<<(expWidth - 1))
-                    : sSatExpQuot_S_div;
+            sExp_Z <= sqrtOp ? (sExpA_S>>>1) + (1<<(expWidth - 1))
+                             : sSatExpQuot_S_div;
             roundingMode_Z <= roundingMode;
         end
 		
@@ -172,29 +172,87 @@ module
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
     wire [1:0] decHiSigA_S = sigA_S[(sigWidth - 1):(sigWidth - 2)] - 1;
-	wire [(sigWidth + 2):0] rem = inReady ? 
-									(oddSqrt_S ? 
-										{decHiSigA_S, sigA_S[(sigWidth - 3):0], 3'b0}
-										: sigA_S<<1)
-									: rem_Z<<1;
+    wire [(sigWidth + 2):0] rem = inReady ? 
+				    (oddSqrt_S ? 
+					{decHiSigA_S, sigA_S[(sigWidth - 3):0], 3'b0}
+					: sigA_S<<1)
+				    : rem_Z<<1;
     wire [sigWidth:0] bitMask = ({{(sigWidth + 2){1'b0}}, 1'b1}<<cycleNum)>>2;
-	wire [sigWidth:0] bitMaskNext = bitMask>>1;
-    wire [(sigWidth + 1):0] trialTerm =
-          ( inReady && !sqrtOp    ? sigB_S<<1           : 0)
-        | ( inReady && evenSqrt_S ? 1<<sigWidth         : 0)
-        | ( inReady && oddSqrt_S  ? 5<<(sigWidth - 1)   : 0)
-        | (!inReady && !sqrtOp_Z    ? {1'b1, fractB_Z}<<1 : 0)
-        | (!inReady &&  sqrtOp_Z  ? sigX_Z<<1 | bitMask : 0);
-			
+    wire [sigWidth:0] bitMaskNext = bitMask>>1;	
+    /*------------------------------------------------------------------------
+    *------------------------------------------------------------------------*/
+	
+	wire loadDiv = inReady && !sqrtOp;
+	wire loadEvenSqrt = inReady && evenSqrt_S;
+	wire loadOddSqrt = inReady && oddSqrt_S;
+	wire calc = !inReady;
+	wire calcDiv = calc && !sqrtOp_Z;
+	wire calcSqrt = calc && sqrtOp_Z;	
+    /*------------------------------------------------------------------------
+    *------------------------------------------------------------------------*/
+	wire [(sigWidth + 1):0] trialTerm;
+
+	wire [4:0] [sigWidth+1:0] trialTermMuxIn = {
+		{sigB_S, 1'b0},
+		{1'b0, 1'b1, sigWidth ' (1'b0)},
+		{3'b101, (sigWidth-1) ' (1'b0)},
+		{1'b0, {1'b1, fractB_Z}, 1'b0},
+		{{sigX_Z[sigWidth:0],1'b0} | bitMask}
+	};
+
+	wire [4:0] trialTermSel = {
+		loadDiv,
+		loadEvenSqrt,
+		loadOddSqrt,
+		calcDiv,
+		calcSqrt
+	};
+   
+	bsg_mux_one_hot #(.width_p(sigWidth+2),.els_p(5))
+		trialTerm_mux(
+			.data_i(trialTermMuxIn),
+			.sel_one_hot_i(trialTermSel),
+			.data_o(trialTerm)
+		);
+    /*------------------------------------------------------------------------
+    *------------------------------------------------------------------------*/
+		
     wire signed [(sigWidth + 3):0] trialRem1 = rem - trialTerm;
 	wire newBit1 = (0 <= trialRem1);
 	wire [(sigWidth + 1):0] sigXNext = sigX_Z | (newBit1 ? bitMask : 0);
 	wire [(sigWidth + 1):0] trialTermNext = sqrtOp_Z ? 
-											sigXNext<<1 | bitMaskNext
-									       :trialTerm;
+		                                   sigXNext<<1 | bitMaskNext
+					          :trialTerm;
 	wire [(sigWidth + 2):0] remNext = (newBit1 ? (trialRem1[(sigWidth + 1):0]) : (rem[(sigWidth + 1):0]))<<1;
 	wire signed [(sigWidth + 3):0] trialRem2 = remNext - trialTermNext ;
-	wire newBit2 = (0 <= trialRem2);
+	wire newBit2 = (0 <= trialRem2);	
+    /*------------------------------------------------------------------------
+    *------------------------------------------------------------------------*/
+
+	wire [(sigWidth + 1):0] sigX_N;
+	wire [3:0] [(sigWidth+1):0] sigX_NMuxIn = {
+		{newBit1, (sigWidth+1) ' (1'b0)},
+		{2'b01, sigWidth ' (1'b0)},
+		{2'b01, newBit1, (sigWidth-1) ' (1'b0)},
+		{sigXNext | (newBit2 ? bitMaskNext : (sigWidth + 1) ' (1'b0))}
+	};
+
+	wire [3:0] sigX_NSel = {
+		loadDiv,
+		loadEvenSqrt,
+		loadOddSqrt,
+		calc
+	};
+   
+	bsg_mux_one_hot #(.width_p(sigWidth+2),.els_p(4))
+		sigX_N_mux(
+			.data_i(sigX_NMuxIn),
+			.sel_one_hot_i(sigX_NSel),
+			.data_o(sigX_N)
+		);	
+    /*------------------------------------------------------------------------
+    *------------------------------------------------------------------------*/
+	
     always @(posedge clock) begin
       if (!nReset) begin
         rem_Z <='0;
@@ -209,12 +267,7 @@ module
 
         if (entering_normalCase || (!inReady && (newBit1 | newBit2))) begin
             notZeroRem_Z <= (trialRem1 != 0 && trialRem2 != 0);
-			sigX_Z <= ( inReady && !sqrtOp   ? newBit1<<(sigWidth + 1) : 0)
-					| ( inReady &&  sqrtOp   ? 1<<sigWidth             : 0)
-					| ( inReady && oddSqrt_S ? newBit1<<(sigWidth - 1) : 0)
-					| (!inReady              ? sigXNext | 
-											 (newBit2 ? bitMaskNext    : 0)     
-											                           : 0);
+	    sigX_Z       <=  sigX_N;
         end
 
       end
@@ -234,7 +287,6 @@ module
     assign out_sig    = {sigX_Z, notZeroRem_Z};
 
 endmodule
-
 /*----------------------------------------------------------------------------
 *----------------------------------------------------------------------------*/
 
