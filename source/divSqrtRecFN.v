@@ -1,3 +1,7 @@
+//====================================================================
+// Schematics: https://docs.google.com/presentation/d/1CLZtLB3oHdmMLjzTL960ydjGzhS26V1yuOX5suPqSh4/edit?usp=sharing
+//====================================================================
+
 `include "HardFloat_consts.vi"
 `include "HardFloat_specialize.vi"
 
