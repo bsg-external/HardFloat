@@ -46,6 +46,7 @@ module
     ) (
         control,
         op,
+        mul_not_fma,
         a,
         b,
         c,
@@ -61,6 +62,7 @@ module
 `include "HardFloat_localFuncs.vi"
     input [(`floatControlWidth - 1):0] control;
     input [2:0] op;
+    input mul_not_fma;
     input [(expWidth + sigWidth):0] a;
     input [(expWidth + sigWidth):0] b;
     input [(expWidth + sigWidth):0] c;
@@ -155,8 +157,9 @@ module
     wire specialCase = isNaNAny || isInfAOrB || isInfC || notNaN_addZeros;
     wire specialNotNaN_signOut =
         (isInfAOrB && signProd) || (isInfC && opSignC)
-            || (notNaN_addZeros && !roundingMode_min && signProd && opSignC)
-            || (notNaN_addZeros && roundingMode_min && (signProd || opSignC));
+            || notNaN_addZeros && ( mul_not_fma ? signProd :
+                                    (!roundingMode_min && signProd && opSignC)
+                                    || (roundingMode_min && (signProd || opSignC)) );
 `ifdef HardFloat_propagateNaNPayloads
     wire signNaN;
     wire [(sigWidth - 2):0] fractNaN;
@@ -392,6 +395,7 @@ module
         // by set op[2] to 1, we can reuse this module to execute RISC-V integer multiply instruction MUL.
         input [2:0] op,
         // Note that for both signed and unsigned multiply, the results are the same, because we truncate the sign extension when evaluating the lower part. 
+        input mul_not_fma,
         input [(expWidth + sigWidth):0] a,
         input [(expWidth + sigWidth):0] b,
         input [(expWidth + sigWidth):0] c,
@@ -421,6 +425,7 @@ module
         mulAddToRaw_preMul(
             control,
             op,
+            mul_not_fma,
             a,
             b,
             c,
@@ -495,6 +500,7 @@ module
     ) ( input clock,
         input [(`floatControlWidth - 1):0] control,
         input [2:0] op, 
+        input mul_not_fma,
         input [(expWidth + sigWidth):0] a,
         input [(expWidth + sigWidth):0] b,
         input [(expWidth + sigWidth):0] c,
@@ -516,6 +522,7 @@ module
             clock,
             control,
             op,
+            mul_not_fma,
             a,
             b,
             c,
