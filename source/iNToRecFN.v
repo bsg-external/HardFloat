@@ -64,7 +64,7 @@ module
     wire [(expWidth - 2):0] adjustedNormDist;
     //countLeadingZeros#(extIntWidth, expWidth - 1)
     //    countLeadingZeros(extAbsIn, adjustedNormDist);
-    logic [$clog2(extIntWidth+1)-1:0] num_zero_lo;
+    wire [$clog2(extIntWidth+1)-1:0] num_zero_lo;
     bsg_counting_leading_zeros #(
       .width_p(extIntWidth)
     ) clz (
