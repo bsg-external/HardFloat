@@ -398,7 +398,6 @@ module
     $error("Intermediate rounding must be smaller than output");
   // synopsys translate_on
 
-  logic [(fullExpWidth + fullSigWidth):0] fullResult;
   roundAnyRawFNToRecFN
    #(.inExpWidth(fullExpWidth)
      ,.inSigWidth(fullSigWidth+2) // See the HardFloat docs for an explanation
@@ -421,8 +420,7 @@ module
      ,.exceptionFlags(fullExceptionFlags)
      );
 
-  logic [(midExpWidth + midSigWidth):0] midResult;
-  logic [4:0] midFlags;
+  wire [(midExpWidth + midSigWidth):0] midResult;
   roundAnyRawFNToRecFN
    #(.inExpWidth(fullExpWidth)
      ,.inSigWidth(fullSigWidth+2) // See the HardFloat docs for an explanation
