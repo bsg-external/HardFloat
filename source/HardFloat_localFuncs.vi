@@ -36,8 +36,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*----------------------------------------------------------------------------
 *----------------------------------------------------------------------------*/
-
-function integer clog2;
+// BSG: automatic qualifier allows reuse of local variable storage
+// TODO: for systemverilog, should we just use builtin $clog?
+//function integer clog2;
+function automatic integer clog2;
     input integer fa;
 
     begin
