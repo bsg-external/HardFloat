@@ -1,3 +1,9 @@
+Note: This is a Bespoke Silicon Group mirror of 
+of https://www.jhauser.us/arithmetic/HardFloat.html
+
+with modifications for PPA improvement. 
+
+---------------------------------
 
 Package Overview for Berkeley HardFloat Release 1
 
