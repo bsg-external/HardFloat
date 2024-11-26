@@ -3,6 +3,17 @@ of https://www.jhauser.us/arithmetic/HardFloat.html
 
 with modifications for PPA improvement. 
 
+We've additionally wrapped the HardFloat/TestFloat/SoftFloat testing infrastructure in
+a Makefile:
+
+        make clean
+        make checkout
+        make run-testfloat-level1
+        make run-testfloat-level2
+
+Note: Our modifications are focused on RISCV, so we do not test other specializations.
+However, we do not expect any major divergences.
+
 ---------------------------------
 
 Package Overview for Berkeley HardFloat Release 1

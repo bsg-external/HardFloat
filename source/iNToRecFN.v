@@ -62,17 +62,8 @@ module
     wire [(intWidth - 1):0] absIn = sign ? -in : in;
     wire [(extIntWidth - 1):0] extAbsIn = absIn;
     wire [(expWidth - 2):0] adjustedNormDist;
-    //countLeadingZeros#(extIntWidth, expWidth - 1)
-    //    countLeadingZeros(extAbsIn, adjustedNormDist);
-    wire [$clog2(extIntWidth+1)-1:0] num_zero_lo;
-    bsg_counting_leading_zeros #(
-      .width_p(extIntWidth)
-    ) clz (
-      .a_i(extAbsIn)
-      ,.num_zero_o(num_zero_lo)
-    );
-    assign adjustedNormDist = (expWidth-1)'(num_zero_lo);
-    
+    countLeadingZeros#(extIntWidth, expWidth - 1)
+        countLeadingZeros(extAbsIn, adjustedNormDist);
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
     assign sig = (extAbsIn<<adjustedNormDist)>>(extIntWidth - intWidth);
