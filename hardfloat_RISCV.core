@@ -1,0 +1,45 @@
+CAPI=2:
+
+name: ::hardfloat_riscv:0-r1
+description: HardFloat specialized for RISCV
+
+filesets:
+  source:
+    files:
+      - source/addRecFN.v
+      - source/bsg_hardfloat_pkg.v
+      - source/compareRecFN.v
+      - source/divSqrtRecFN_small.v
+      - source/fNToRecFN.v
+      - source/HardFloat_consts.vi: {is_include_file : true}
+      - source/HardFloat_localFuncs.vi: {is_include_file : true}
+      - source/HardFloat_primitives.v
+      - source/HardFloat_rawFN.v
+      - source/iNToRecFN.v
+      - source/isSigNaNRecFN.v
+      - source/mulAddRecFN.v
+      - source/mulRecFN.v
+      - source/recFNToFN.v
+      - source/recFNToIN.v
+      - source/recFNToRecFN.v
+      - source/RISCV/HardFloat_specialize.vi: {is_include_file : true}
+      - source/RISCV/HardFloat_specialize.v
+    file_type: systemVerilogSource
+
+targets:
+  default:
+    filesets: [source]
+
+  # Example lint target
+  lint_compareRecFN:
+    default_tool: verilator
+    filesets: [source]
+    tools:
+      verilator: 
+        mode: lint-only
+        verilator_options:
+          - -Wwarn-lint
+          - -Wwarn-style
+          - -Wno-WIDTH
+          - -Wno-DECLFILENAME
+    toplevel: compareRecFN
