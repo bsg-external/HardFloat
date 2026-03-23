@@ -39,6 +39,7 @@ ifndef SPECIALIZE_TYPE
 $(error Macro 'SPECIALIZE_TYPE' not defined)
 endif
 
+BASEJUMP_STL_DIR ?= ../../../../basejump_stl
 SOURCE_DIR ?= ../../../source
 TEST_SOURCE_DIR ?= ../../source
 CFLAGS ?= -O2
@@ -46,7 +47,7 @@ CFLAGS ?= -O2
 EXE =
 
 TRANSLATE_V_C_MK = \
-  verilator -Wno-WIDTH -I$(SOURCE_DIR)/$(SPECIALIZE_TYPE) -I$(SOURCE_DIR) \
+  verilator -Wno-WIDTH -Wno-UNOPTFLAT -I$(SOURCE_DIR)/$(SPECIALIZE_TYPE) -I$(SOURCE_DIR) -I$(BASEJUMP_STL_DIR)/bsg_misc \
     --cc --exe --compiler gcc -CFLAGS "-I.. $(CFLAGS)"
 OBJ_DIR = obj_dir
 TESTFLOAT_GEN = testfloat_gen
@@ -100,6 +101,11 @@ default:
 	@echo "Invalid Makefile target."
 	@echo "(Valid targets include 'test-level1' and 'test-level2'.)"
 
+vpath %.sv \
+  $(BASEJUMP_STL_DIR)/bsg_misc \
+  $(SOURCE_DIR)/$(SPECIALIZE_TYPE) \
+  $(SOURCE_DIR) \
+
 vpath %.vi \
   $(SOURCE_DIR)/$(SPECIALIZE_TYPE) \
   $(SOURCE_DIR) \
@@ -126,6 +132,10 @@ SRC_COMMON = \
   isSigNaNRecFN.v \
   HardFloat_rawFN.v \
   testCommon.c \
+  bsg_priority_encode.sv \
+  bsg_priority_encode_one_hot_out.sv \
+  bsg_encode_one_hot.sv \
+  bsg_scan.sv \
 
 $(SRC_COMMON): $(INCLUDES)
 

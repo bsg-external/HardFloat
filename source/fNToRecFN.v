@@ -58,14 +58,8 @@ module
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
     wire [(normDistWidth - 1):0] normDist;
-    //countLeadingZeros#(sigWidth - 1, normDistWidth)
-    //    countLeadingZeros(fractIn, normDist);
-    bsg_counting_leading_zeros #(
-      .width_p(sigWidth-1)
-    ) clz (
-      .a_i(fractIn)
-      ,.num_zero_o(normDist)
-    );
+    countLeadingZeros#(sigWidth - 1, normDistWidth)
+        countLeadingZeros(fractIn, normDist);
     wire [(sigWidth - 2):0] subnormFract = (fractIn<<normDist)<<1;
     wire [expWidth:0] adjustedExp =
         (isZeroExpIn ? normDist ^ ((1<<(expWidth + 1)) - 1) : expIn)

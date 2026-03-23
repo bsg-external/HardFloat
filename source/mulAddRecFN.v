@@ -322,15 +322,9 @@ module
         compressBy2_notCDom_absSigSum(
             notCDom_absSigSum, notCDom_reduced2AbsSigSum);
     wire [(clog2(prodWidth + 4) - 2):0] notCDom_normDistReduced2;
-    //countLeadingZeros#((prodWidth + 2)/2 + 1, clog2(prodWidth + 4) - 1)
-    //    countLeadingZeros_notCDom(
-    //        notCDom_reduced2AbsSigSum, notCDom_normDistReduced2);
-    bsg_counting_leading_zeros #(
-      .width_p((prodWidth + 2)/2 + 1)
-    ) clz (
-      .a_i(notCDom_reduced2AbsSigSum)
-      ,.num_zero_o(notCDom_normDistReduced2)
-    );
+    countLeadingZeros#((prodWidth + 2)/2 + 1, clog2(prodWidth + 4) - 1)
+        countLeadingZeros_notCDom(
+            notCDom_reduced2AbsSigSum, notCDom_normDistReduced2);
     wire [(clog2(prodWidth + 4) - 1):0] notCDom_nearNormDist =
         notCDom_normDistReduced2<<1;
     wire signed [(expWidth + 1):0] notCDom_sExp =
@@ -444,8 +438,7 @@ module
             .o(mulAddResult)
         );
 
-    bsg_dff_chain#($bits({intermed_compactState, intermed_sExp, intermed_CDom_CAlignDist, 
-            intermed_highAlignedSigC, roundingMode}), pipelineStages)
+    bsg_dff_chain#(6+expWidth+2+clog2(sigWidth+1)+sigWidth+2+3, pipelineStages)
         shuntMulAdd (
             .clk_i(clock),
             .data_i({intermed_compactState, intermed_sExp, intermed_CDom_CAlignDist, 
@@ -477,9 +470,9 @@ endmodule
  *  pipelineStages is used to insert pipelining registers according to the 
  *  following placement:
  *   ...            ...
- *    |       mulAddRecFNToRaw     -> consumes pipeline_p[0]
+ *    |       mulAddRecFNToRaw     -> consumes pipelineStages0
  *    |        |       |
- *  shunt  pre_round   |           -> consumes pipeline_p[1]
+ *  shunt  pre_round   |           -> consumes pipelineStages1
  *     \       /       |
  *    roundRawOut      |
  *          |          |
@@ -490,7 +483,8 @@ module
     mulAddRecFN#(
         parameter expWidth = 3,
         parameter sigWidth = 3,
-     parameter int pipelineStages[1:0] = {0,0},
+        parameter pipelineStages1 = 0,
+        parameter pipelineStages0 = 0,
         parameter imulEn = 1'b1
     ) ( input clock,
         input [(`floatControlWidth - 1):0] control,
@@ -511,7 +505,7 @@ module
     wire [2:0] roundingMode_Z;
     wire [(`floatControlWidth - 1):0] control_Z;
 
-    mulAddRecFNToRaw#(expWidth, sigWidth, pipelineStages[0], imulEn)
+    mulAddRecFNToRaw#(expWidth, sigWidth, pipelineStages0, imulEn)
         mulAddRecFNToRaw(
             clock,
             control,
@@ -530,7 +524,7 @@ module
             out_imul
         );
 
-    bsg_dff_chain#(5 + $bits({out_sExp_Z, out_sig_Z}), pipelineStages[1])
+    bsg_dff_chain#((5+expWidth+2+sigWidth+3), pipelineStages1)
     pre_round (
         .clk_i(clock),
         .data_i({invalidExc, out_isNaN, out_isInf, out_isZero, out_sign, 
@@ -539,7 +533,7 @@ module
                   out_sExp_Z, out_sig_Z})
     );
 
-    bsg_dff_chain#($bits({roundingMode, control}), pipelineStages[0] + pipelineStages[1])
+    bsg_dff_chain#((3+`floatControlWidth), pipelineStages0+pipelineStages1)
     shunt (
         .clk_i(clock),
         .data_i({roundingMode, control}),

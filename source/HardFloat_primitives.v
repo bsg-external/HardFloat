@@ -115,21 +115,25 @@ module
 
     wire [(inWidth - 1):0] reverseIn;
     reverse#(inWidth) reverse_in(in, reverseIn);
-    wire [inWidth:0] oneLeastReverseIn =
-        {1'b1, reverseIn} & ({1'b0, ~reverseIn} + 1);
-    genvar ix;
-    generate
-        for (ix = 0; ix <= inWidth; ix = ix + 1) begin :Bit
-            wire [(countWidth - 1):0] countSoFar;
-            if (ix == 0) begin
-                assign countSoFar = 0;
-            end else begin
-                assign countSoFar =
-                    Bit[ix - 1].countSoFar | (oneLeastReverseIn[ix] ? ix : 0);
-                if (ix == inWidth) assign count = countSoFar;
-            end
-        end
-    endgenerate
+    wire [$clog2(inWidth+1)-1:0] addr;
+    wire v;
+    bsg_priority_encode#(inWidth+1,1) pe({1'b1, reverseIn}, addr, v);
+    assign count = countWidth'(addr);
+    //wire [inWidth:0] oneLeastReverseIn =
+    //    {1'b1, reverseIn} & ({1'b0, ~reverseIn} + 1);
+    //genvar ix;
+    //generate
+    //    for (ix = 0; ix <= inWidth; ix = ix + 1) begin :Bit
+    //        wire [(countWidth - 1):0] countSoFar;
+    //        if (ix == 0) begin
+    //            assign countSoFar = 0;
+    //        end else begin
+    //            assign countSoFar =
+    //                Bit[ix - 1].countSoFar | (oneLeastReverseIn[ix] ? ix : 0);
+    //            if (ix == inWidth) assign count = countSoFar;
+    //        end
+    //    end
+    //endgenerate
 
 endmodule
 
